@@ -73,6 +73,7 @@ void SDLResizeBuffer(Arena *arena, SDL_Renderer *renderer, i32 width, i32 height
 void SDLRenderBufferToWindow(SDL_Renderer *renderer){
     SDL_UpdateTexture(buffer.texture, 0, buffer.memory, buffer.pitch);
     SDL_RenderTexture(renderer, buffer.texture, 0, 0);
+    SDL_RenderPresent(renderer);
 }
 
 

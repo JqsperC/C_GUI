@@ -9,6 +9,15 @@ static ui_config uiconfig;
 void UI_ConfigSetFont(TTF_Font *font){
     uiconfig.font = font;
 }
+
+void UI_ConfigSetFGColor(ColorRGBX color){
+    uiconfig.fg = color;
+}
+
+void UI_ConfigSetBGColor(ColorRGBX color){
+    uiconfig.bg = color;
+}
+
 void UI_Begin(i32 mouse_x, i32 mouse_y, b32 mouse_down){
     uistate.left_mouse_down = mouse_down;
     uistate.mouse_x = mouse_x;
@@ -41,8 +50,34 @@ b32 UI_Button(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height) {
         color = (ColorRGBX) {.green = 255};
     } else if (uistate.hot == id) {
         color = (ColorRGBX) {.blue = 255};
+    } else if (uistate.active == id) {
+        color = (ColorRGBX) {.green = 255};
     }
     RenderRectangle(pos_x, pos_y, width, height, color);
-    return id == uistate.active;
+    b32 button_clicked = uistate.active == id && uistate.hot == id && !uistate.left_mouse_down;
+    return button_clicked;
+}
+
+
+void UI_Checkbox(char *text, i32 id, i32 pos_x, i32 pos_y, i32 size, b32 *value){
+    if (uistate.mouse_x > pos_x &&
+        uistate.mouse_y > pos_y &&
+        uistate.mouse_x < pos_x + size &&
+        uistate.mouse_y < pos_y + size) {
+        uistate.hot = id;
+        if (uistate.active == 0 && uistate.left_mouse_down) {
+            uistate.active = id;
+        }
+    }
+    b32 clicked = uistate.active == id && uistate.hot == id && !uistate.left_mouse_down;
+    if (clicked) {
+        *value = !*value;
+    }
+    i32 gap = 5;
+    RenderRectangle(pos_x, pos_y, size, size, uiconfig.fg);
+    RenderRectangle(pos_x + gap, pos_y + gap, size - 2 * gap, size - 2*gap, uiconfig.bg);
+    if (*value){
+        RenderRectangle(pos_x + 2 * gap, pos_y + 2 * gap, size - 4 * gap, size - 4 * gap, uiconfig.fg);
+    }
 }
 #endif

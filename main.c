@@ -85,16 +85,24 @@ int main(){
         return -1;
     }
     UI_ConfigSetFont(font);
+    UI_ConfigSetFGColor((ColorRGBX) {.green = 255});
+    UI_ConfigSetBGColor((ColorRGBX) {});
     sdl_ui_state ui_state;
     dimension = SDLGetWindowSize(window);
     SDLResizeBuffer(arena_permanent, renderer, dimension.width, dimension.height);
+
+    b32 test = false;
     while(EventLoop(&ui_state)){
         FlushBuffer();
+
         UI_Begin(ui_state.mouse_x, ui_state.mouse_y, ui_state.left_mouse_down);
-        UI_Button("test ", 60, 100, 100, 100, 100);
+        if(UI_Button("test ", 60, 300, 500, 100, 100)){
+            printf("Click\n");
+        }
+        UI_Checkbox("test", 100, 200, 200, 50, &test);
         UI_End();
+
         SDLRenderBufferToWindow(renderer);
-        SDL_RenderPresent(renderer);
     }
     DestroyBackbuffer();
     ArenaRelease(arena_permanent);
