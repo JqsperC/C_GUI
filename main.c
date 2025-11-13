@@ -84,22 +84,30 @@ int main(){
         printf("Failed to open font: %s\n", SDL_GetError());
         return -1;
     }
-    UI_ConfigSetFont(font);
-    UI_ConfigSetFGColor((ColorRGBX) {.green = 255});
-    UI_ConfigSetBGColor((ColorRGBX) {});
+    UI_StyleSetFont(font);
+    UI_StyleSetFGColor((ColorRGBX) {.green = 255});
+    UI_StyleSetBGColor((ColorRGBX) {});
+    UI_StyleSetHoverColor((ColorRGBX) {.blue = 255});
+    UI_StyleSetActiveColor((ColorRGBX) {.red = 255});
     sdl_ui_state ui_state;
     dimension = SDLGetWindowSize(window);
     SDLResizeBuffer(arena_permanent, renderer, dimension.width, dimension.height);
 
-    b32 test = false;
+    f32 value = 0;
+    i32 test = 0;
+    b32 check = false;
     while(EventLoop(&ui_state)){
         FlushBuffer();
 
         UI_Begin(ui_state.mouse_x, ui_state.mouse_y, ui_state.left_mouse_down);
-        if(UI_Button("test ", 60, 300, 500, 100, 100)){
-            printf("Click\n");
+
+        UI_Slider(NULL, 100, 100, 100, 300, 70, 0, 100, &value);
+        UI_Selector(NULL, 69, 100, 250, 70, 3, &test); 
+        if (UI_Button(NULL, 22, 250, 250, 200, 100)) {
+            printf("click\n");
         }
-        UI_Checkbox("test", 100, 200, 200, 50, &test);
+        UI_Checkbox(NULL, 23, 250, 400, 70, &check);
+
         UI_End();
 
         SDLRenderBufferToWindow(renderer);
