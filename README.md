@@ -1,8 +1,12 @@
 ## Selfmade IMGUI in C99
 
-Repository for learning and making my own immediate mode GUI system in C.
+Learning to make GUI from scratch in C99
 
-For now it uses SDL3/SDL3_ttf as the only dependencies.
+Rendering: software renderer into an RGBX bitmap
+
+Dependencies: 
+- SDL: opening a window, getting input events, drawing bitmap to window
+- Soon(TM) FreeType: generating bitmap font for making custom ASCII text renderer
 
 ## Building
 
