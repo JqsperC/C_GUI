@@ -1,5 +1,8 @@
 *.o
 build/*
+build
 main
 program
 compile_commands.json
+.cache/*
+.cache
