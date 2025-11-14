@@ -2,7 +2,8 @@ TARGET := program
 
 CC := gcc
 CFLAGS := -g -Wall -Wextra -std=c99 -I.
-LLIBRARIES := -lSDL3 -lSDL3_ttf
+CFLAGS += -I/usr/include/freetype2 -I/usr/include/libpng16
+LLIBRARIES := -lSDL3 -lSDL3_ttf -lfreetype
 
 
 BUILD_DIR := build
