@@ -4,6 +4,8 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600 
 
+#define FRAMERATE 144
+
 #include "base/base.h"
 #include "renderer/renderer.h"
 #include "ui/ui.h"
@@ -56,12 +58,18 @@ b32 EventLoop(sdl_ui_state *ui_state_old){
     return true;
 }
 
+
+static f32 SDLGetSecondsElapsed(u64 OldCounter, u64 CurrentCounter)
+{
+    return ((f32)(CurrentCounter - OldCounter) / (f32)(SDL_GetPerformanceFrequency()));
+}
+
+
 int main(){
     printf("%lu\n", sizeof(ColorARGB));
     SDL_Window *window;
     SDL_Renderer *renderer;
     sdl_window_dimension dimension;
-
     Arena *arena_permanent = ArenaAllocate();
 
     if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
@@ -77,9 +85,12 @@ int main(){
     if (!InitializeTextRenderer()){
         return -1;
     }
-    if (!LoadFont("/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf", 64)){
+    if (!LoadFont("/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf", 16)){
         return -1;
     }
+
+    f32 seconds_per_frame = 1.0f / FRAMERATE;
+    u64 last_counter = SDL_GetPerformanceCounter();
 
     UI_StyleSetFGColor((ColorRGBX){.red = 255, .green = 255, .blue = 255} );
     UI_StyleSetBGColor((ColorRGBX) {});
@@ -89,30 +100,35 @@ int main(){
     dimension = SDLGetWindowSize(window);
     SDLResizeBuffer(arena_permanent, renderer, dimension.width, dimension.height);
 
-    f32 value = 0;
-    i32 test = 0;
-    b32 check = false;
     while(EventLoop(&ui_state)){
+
         FlushBuffer();
 
         UI_Begin(ui_state.mouse_x, ui_state.mouse_y, ui_state.left_mouse_down);
 
-        UI_Slider(NULL, 100, 100, 100, 300, 70, 0, 100, &value);
-        UI_Selector(NULL, 69, 100, 250, 70, 3, &test); 
-        if (UI_Button(NULL, 22, 250, 250, 200, 100)) {
-            printf("click\n");
-        }
-        UI_Checkbox(NULL, 23, 250, 400, 70, &check);
-
-        RenderCharacter(400, 400, 'h', (ColorRGBX) {.pixel = 0xFFFFFFFF});
-        RenderCharacter(440, 400, 'e', (ColorRGBX) {.pixel = 0xFFFFFFFF});
-        RenderCharacter(480, 400, 'l', (ColorRGBX) {.pixel = 0xFFFFFFFF});
-        RenderCharacter(520, 400, 'l', (ColorRGBX) {.pixel = 0xFFFFFFFF});
-        RenderCharacter(560, 400, 'o', (ColorRGBX) {.pixel = 0xFFFFFFFF});
+        i32 width = 300;
+        i32 height = 400;
+        i32 pos_x = (WINDOW_WIDTH - width) / 2.0f;
+        i32 pos_y = (WINDOW_HEIGHT - height) / 2.0f;
+        ColorRGBX color = {.pixel = 0xFFFFFFFF};
+        ColorRGBX bg = {.pixel = 0xFF00FFFF};
+        RenderRectangle(pos_x, pos_y, width, height, bg);
+        RenderText(pos_x, pos_y, width, height, "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.", color, WRAP_KIND_WORD, ALIGN_CENTER);
 
         UI_End();
 
         SDLRenderBufferToWindow(renderer);
+
+
+        // Framerate
+        DEBUG_LOG("Rendered frame in %.6f ms\n", SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()) * 1000);
+
+        while (SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()) < seconds_per_frame)
+        {
+            SDL_Delay((seconds_per_frame - SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter())) * 1000);
+        }
+        DEBUG_LOG("Running at %.2f fps\n", 1.0f / SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()));
+        last_counter = SDL_GetPerformanceCounter();
     }
     DestroyBackbuffer();
     ArenaRelease(arena_permanent);

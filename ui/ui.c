@@ -6,8 +6,8 @@
 static ui_state uistate;
 static ui_style uistyle;
 
-void UI_StyleSetFont(TTF_Font *font){
-    uistyle.font = font;
+void UI_StyleSetFont(char *file){
+    DEBUG_LOG("TODO: UI Style_font\n");
 }
 
 void UI_StyleSetFGColor(ColorRGBX color){
@@ -43,6 +43,11 @@ void UI_End(){
     }
 }
 
+void UI_Label(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height)
+{
+    RenderRectangle(pos_x, pos_y, width, height, uistyle.bg);
+    RenderText(pos_x, pos_y, width, height, text, uistyle.fg, WRAP_KIND_WORD, ALIGN_CENTER);
+}
 b32 UI_Button(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height) {
     if (uistate.mouse_x > pos_x &&
         uistate.mouse_y > pos_y &&
@@ -62,6 +67,7 @@ b32 UI_Button(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height) {
         color = uistyle.active;
     }
     RenderRectangle(pos_x, pos_y, width, height, color);
+    RenderText(pos_x, pos_y, width, height, text, uistyle.fg, WRAP_KIND_WORD, ALIGN_CENTER);
     b32 button_clicked = uistate.active == id && uistate.hot == id && !uistate.left_mouse_down;
     return button_clicked;
 }

@@ -7,8 +7,11 @@ LLIBRARIES := -lSDL3 -lfreetype
 
 all: $(TARGET)
 
-debug: CFLAGS += -DDEBUG -g
+debug: CFLAGS += -DDEBUG -g -fsanitize=address
 debug: $(TARGET)
+
+optimize: CFLAGS += -O3
+optimize: $(TARGET)
 
 BUILD_DIR := build
 SRC_DIRS := $(shell find . -type d)
