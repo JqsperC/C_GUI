@@ -60,7 +60,6 @@ int main(){
     printf("%lu\n", sizeof(ColorARGB));
     SDL_Window *window;
     SDL_Renderer *renderer;
-    TTF_Font *font;
     sdl_window_dimension dimension;
 
     Arena *arena_permanent = ArenaAllocate();
@@ -70,22 +69,19 @@ int main(){
         return -1;
     }
 
-    if (!TTF_Init()) {
-        printf("Failed to initialize TTF: %s\n", SDL_GetError());
-        return -1;
-    }
     if (!SDL_CreateWindowAndRenderer("UI Test", WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer)) {
         printf("Failed to create Window/Rendere: %s\n", SDL_GetError());
         return -1;
     }
-
-    font = TTF_OpenFont("/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf", 20);
-    if (!font) {
-        printf("Failed to open font: %s\n", SDL_GetError());
+    
+    if (!InitializeTextRenderer()){
         return -1;
     }
-    UI_StyleSetFont(font);
-    UI_StyleSetFGColor((ColorRGBX) {.green = 255});
+    if (!LoadFont("/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf", 64)){
+        return -1;
+    }
+
+    UI_StyleSetFGColor((ColorRGBX){.red = 255, .green = 255, .blue = 255} );
     UI_StyleSetBGColor((ColorRGBX) {});
     UI_StyleSetHoverColor((ColorRGBX) {.blue = 255});
     UI_StyleSetActiveColor((ColorRGBX) {.red = 255});
@@ -107,6 +103,12 @@ int main(){
             printf("click\n");
         }
         UI_Checkbox(NULL, 23, 250, 400, 70, &check);
+
+        RenderCharacter(400, 400, 'h', (ColorRGBX) {.pixel = 0xFFFFFFFF});
+        RenderCharacter(440, 400, 'e', (ColorRGBX) {.pixel = 0xFFFFFFFF});
+        RenderCharacter(480, 400, 'l', (ColorRGBX) {.pixel = 0xFFFFFFFF});
+        RenderCharacter(520, 400, 'l', (ColorRGBX) {.pixel = 0xFFFFFFFF});
+        RenderCharacter(560, 400, 'o', (ColorRGBX) {.pixel = 0xFFFFFFFF});
 
         UI_End();
 

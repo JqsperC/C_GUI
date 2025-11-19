@@ -22,6 +22,7 @@ typedef struct {
     i32 bytes_per_pixel;
 } sdl_offscreen_buffer;
 
+
 typedef struct {
     union {
         struct {
@@ -51,7 +52,7 @@ typedef struct {
 void DestroyBackbuffer();
 sdl_window_dimension SDLGetWindowSize(SDL_Window* window);
 
-ColorRGBX RemoveAlpha(ColorRGBX background, ColorARGB foreground);
+ColorRGBX BlendRGBXARGB(ColorRGBX background, ColorARGB foreground);
 
 void RenderRectangle(i32 pos_x, i32 pos_y, i32 width, i32 height,
                      ColorRGBX color);
@@ -71,5 +72,14 @@ void SDLRenderText(const u8 *text,
         i32 height);
 
 void FlushBuffer();
+
+void RenderARGBBitmap(i32 pos_x, i32 pos_y, u32 *memory, i32 width, i32 height);
+void RenderRGBXBitmap(i32 pos_x, i32 pos_y, u32 *memory, i32 width, i32 height);
+
+// TEXT RENDERER
+
+b32 InitializeTextRenderer();
+b32 LoadFont(char *filename, i32 size);
+b32 RenderCharacter(i32 pos_x, i32 pos_y, u8 character, ColorRGBX color);
 
 #endif

@@ -8,6 +8,12 @@
 #define Megabytes(Value) ((u64)(Value) * 1024 * 1024)
 #define Gigabytes(Value) ((u64)(Value) * 1024 * 1024 * 1024)
 
+#ifdef DEBUG
+#define DEBUG_LOG(...) printf(__VA_ARGS__)
+#else
+#define DEBUG_LOG(fmt, ...) 
+#endif
+
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;

@@ -1,17 +1,19 @@
 TARGET := program
 
 CC := gcc
-CFLAGS := -g -Wall -Wextra -std=c99 -I.
+CFLAGS := -Wall -Wextra -std=c99 -I.
 CFLAGS += -I/usr/include/freetype2 -I/usr/include/libpng16
-LLIBRARIES := -lSDL3 -lSDL3_ttf -lfreetype
+LLIBRARIES := -lSDL3 -lfreetype
 
+all: $(TARGET)
+
+debug: CFLAGS += -DDEBUG -g
+debug: $(TARGET)
 
 BUILD_DIR := build
 SRC_DIRS := $(shell find . -type d)
 SRCS := $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.c))
 OBJS := $(patsubst ./%, $(BUILD_DIR)/%, $(SRCS:.c=.o))
-
-all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(LLIBRARIES) $(OBJS) -o $@
