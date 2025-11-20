@@ -4,7 +4,7 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600 
 
-#define FRAMERATE 144
+#define FRAMERATE 60
 
 #include "base/base.h"
 #include "renderer/renderer.h"
@@ -88,10 +88,14 @@ int main(){
     if (!LoadFont("/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf", 16)){
         return -1;
     }
-
+    UI_Initialize();
+    
     f32 seconds_per_frame = 1.0f / FRAMERATE;
     u64 last_counter = SDL_GetPerformanceCounter();
-
+    UI_SetStyle(
+            (ui_style)
+            {.border = (ColorRGBX){.red = 255}}
+            );
     UI_StyleSetFGColor((ColorRGBX){.red = 255, .green = 255, .blue = 255} );
     UI_StyleSetBGColor((ColorRGBX) {});
     UI_StyleSetHoverColor((ColorRGBX) {.blue = 255});
@@ -104,23 +108,32 @@ int main(){
 
         FlushBuffer();
 
-        UI_Begin(ui_state.mouse_x, ui_state.mouse_y, ui_state.left_mouse_down);
 
-        i32 width = 300;
-        i32 height = 400;
-        i32 pos_x = (WINDOW_WIDTH - width) / 2.0f;
-        i32 pos_y = (WINDOW_HEIGHT - height) / 2.0f;
-        ColorRGBX color = {.pixel = 0xFFFFFFFF};
-        ColorRGBX bg = {.pixel = 0xFF00FFFF};
-        RenderRectangle(pos_x, pos_y, width, height, bg);
-        RenderText(pos_x, pos_y, width, height, "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.", color, WRAP_KIND_WORD, ALIGN_CENTER);
+
+        UI_Begin(ui_state.mouse_x, ui_state.mouse_y, ui_state.left_mouse_down, WINDOW_WIDTH - 1, WINDOW_HEIGHT - 1);
+
+
+        UI_widget *widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 200, .kind = UI_SIZEKIND_PIXELS}});
+        UI_PushParent(widget, AXIS_X);
+        
+        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 0.25, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}});
+        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 0.5, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}});
+        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 0.25, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}});
+
+        UI_PopParent();
+        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 300, .kind = UI_SIZEKIND_PIXELS}});
+        UI_PushParent(widget, AXIS_Y);
+        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 50, .kind = UI_SIZEKIND_PIXELS}});
+        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 50, .kind = UI_SIZEKIND_PIXELS}});
+        UI_PopParent();
+        UI_Layout();
+        UI_Render();
 
         UI_End();
-
         SDLRenderBufferToWindow(renderer);
 
+        //Framerate
 
-        // Framerate
         DEBUG_LOG("Rendered frame in %.6f ms\n", SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()) * 1000);
 
         while (SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()) < seconds_per_frame)

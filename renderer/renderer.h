@@ -56,6 +56,7 @@ ColorRGBX BlendRGBXARGB(ColorRGBX background, ColorARGB foreground);
 void RenderRectangle(i32 pos_x, i32 pos_y, i32 width, i32 height,
                      ColorRGBX color);
 
+void RenderRectOutlines(Rectangle rect, ColorRGBX colo );
 void RenderRect(Rectangle rect, ColorRGBX color);
 void SDLResizeBuffer(Arena *arena, SDL_Renderer *renderer, i32 width, i32 height);
 void SDLRenderBufferToWindow(SDL_Renderer *renderer);

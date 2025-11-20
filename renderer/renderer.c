@@ -29,6 +29,43 @@ ColorRGBX BlendRGBXARGB(ColorRGBX background, ColorARGB foreground) {
     return res;
 }
 
+void RenderRectOutlines(Rectangle rect, ColorRGBX color){
+    u32 *pixels = backbuffer.memory;
+    i32 x = rect.x;
+    i32 y = rect.y;
+    i32 w = rect.width;
+    i32 h = rect.height;
+    if (y < backbuffer.height)
+    {
+        for (i32 i = x; i < x + w && i < backbuffer.width; i++)
+        {
+            pixels[i + y * backbuffer.width] = color.pixel;
+        }
+    }
+    if (y + h < backbuffer.height)
+    {
+        for (i32 i = x; i < x + w && i < backbuffer.width; i++)
+        {
+            pixels[i + (y + h) * backbuffer.width] = color.pixel;
+        }
+    }
+
+    if (x < backbuffer.width)
+    {
+        for (i32 i = y; i < y + h && i < backbuffer.height; i++)
+        {
+            pixels[x + i * backbuffer.width] = color.pixel;
+        }
+    }
+    if (x + w < backbuffer.width)
+    {
+        for (i32 i = y; i < y + h && i < backbuffer.height; i++)
+        {
+            pixels[x + w + i * backbuffer.width] = color.pixel;
+        }
+    }
+}
+
 void RenderRectangle(i32 pos_x, i32 pos_y, i32 width, i32 height, ColorRGBX color){
     ColorRGBX *pixel = (ColorRGBX*) backbuffer.memory;
     for (i32 x = 0; x < width && x + pos_x < backbuffer.width; x++){

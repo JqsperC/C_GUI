@@ -3,8 +3,53 @@
 
 #include "ui.h"
 #include <stdio.h>
+
+static UI_widget *widget_list[256];
+static i32 widget_list_idx = 0;
+static UI_widget *GetWidgetByID(i32 id)
+{
+    for (i32 i = 0; i < widget_list_idx; i++) 
+    {
+        if (widget_list[i]->id == id) {
+            return widget_list[i];
+        }
+    }
+    return NULL;
+}
+static b32 AddWidget(UI_widget *widget)
+{
+    if (widget_list_idx < 256)
+    {
+        widget_list[widget_list_idx] = widget;
+        widget_list_idx++;
+        return true;
+    }
+    return false;
+}
+
 static ui_state uistate;
 static ui_style uistyle;
+
+static UI_widget *root;
+static UI_widget *parent;
+
+static Arena *widget_arena;
+
+static i32 current_id;
+
+void UI_Initialize()
+{
+    widget_arena = ArenaAllocate();
+    if (!widget_arena)
+    {
+        DEBUG_LOG("Failed to initialize UI System\n");
+    }
+}
+
+void UI_SetStyle(ui_style style){
+    uistyle = style;
+}
+
 
 void UI_StyleSetFont(char *file){
     DEBUG_LOG("TODO: UI Style_font\n");
@@ -26,13 +71,25 @@ void UI_StyleSetActiveColor(ColorRGBX color){
     uistyle.active = color;
 }
 
-void UI_Begin(i32 mouse_x, i32 mouse_y, b32 mouse_down){
+void UI_Begin(i32 mouse_x, i32 mouse_y, b32 mouse_down, i32 width, i32 height){
+    current_id = 0;
     uistate.left_mouse_down = mouse_down;
     uistate.mouse_x = mouse_x;
     uistate.mouse_y = mouse_y;
 
     uistate.id = 0;
     uistate.hot = 0;
+
+    ui_size size[AXIS_COUNT];
+    size[AXIS_X].kind = UI_SIZEKIND_PIXELS;
+    size[AXIS_X].value = width;
+    size[AXIS_Y].kind = UI_SIZEKIND_PIXELS;
+    size[AXIS_Y].value = height;
+    UI_widget *widget = UI_MakeWidget(0, NULL, size);
+
+    root = widget;
+    parent = widget;
+    widget->layout_direction = AXIS_Y;
 }
 
 void UI_End(){
@@ -43,11 +100,276 @@ void UI_End(){
     }
 }
 
+UI_widget *UI_PushParent(UI_widget *widget, ui_layout_axis layout_direction){
+    widget->layout_direction = layout_direction;
+    widget->parent = parent;
+    parent = widget;
+    return parent;
+}
+
+UI_widget *UI_PopParent(){
+    parent = parent->parent;
+    return parent;
+}
+
+i32 UI_Key(){
+    return current_id++;
+}
+
+UI_widget *UI_MakeWidget(ui_widget_flags flags, u8 *string, ui_size size[AXIS_COUNT]){
+    i32 id = UI_Key();
+    UI_widget *widget = GetWidgetByID(id);
+    if (!widget)
+    {
+        widget = ArenaPushZero(widget_arena, sizeof(UI_widget));
+        if (!widget) {
+            return NULL;
+        }
+        AddWidget(widget);
+    }
+    widget->id = id;
+    widget->flags = flags;
+    widget->size[AXIS_X] = size[AXIS_X]; 
+    widget->size[AXIS_Y] = size[AXIS_Y]; 
+
+    widget->parent = parent;
+    widget->first = NULL;
+    widget->last = NULL;
+    widget->next = NULL;
+    widget->prev = NULL;
+    if (id == 0)
+    {
+        return widget;
+    }
+    if (widget->parent->last)
+    {
+        widget->prev = widget->parent->last;
+        widget->prev->next = widget;
+        parent->last = widget;
+    } else
+    {
+        parent->first = widget;
+        parent->last = widget;
+    }
+    return widget;
+}
+
+
+void LayoutStandaloneSize(UI_widget *widget)
+{
+    if (!widget)
+    {
+        return;
+    }
+    switch (widget->size[AXIS_X].kind)
+    {
+        case UI_SIZEKIND_PIXELS:
+        {
+            widget->computed_size[AXIS_X] = widget->size[AXIS_X].value;
+        }
+        case UI_SIZEKIND_TEXT_CONTENT:
+        {
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    switch (widget->size[AXIS_Y].kind)
+    {
+        case UI_SIZEKIND_PIXELS:
+         {
+             widget->computed_size[AXIS_Y] = widget->size[AXIS_Y].value;
+         }
+        case UI_SIZEKIND_TEXT_CONTENT:
+        {
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    DEBUG_LOG("Standalone Size: %f %f \n", widget->computed_size[AXIS_X], widget->computed_size[AXIS_Y]);
+    LayoutStandaloneSize(widget->next);
+    LayoutStandaloneSize(widget->first);
+}
+
+void LayoutUpwardsDependentSize(UI_widget *widget)
+{
+    if (!widget)
+    {
+        return;
+    }
+    i32 parent_size[AXIS_COUNT];
+    if (widget->parent) {
+        parent_size[AXIS_X] = widget->parent->computed_size[AXIS_X];
+        parent_size[AXIS_Y] = widget->parent->computed_size[AXIS_Y];
+    }
+    switch (widget->size[AXIS_X].kind)
+    {
+        case UI_SIZEKIND_PARENT_PERCENT:
+            widget->computed_size[AXIS_X] = widget->size[AXIS_X].value * parent_size[AXIS_X];
+            break;
+        default:
+            break;
+    }
+    switch (widget->size[AXIS_Y].kind)
+    {
+        case UI_SIZEKIND_PARENT_PERCENT:
+            widget->computed_size[AXIS_Y] = widget->size[AXIS_Y].value * parent_size[AXIS_Y];
+            break;
+        default:
+            break;
+    }
+    DEBUG_LOG("Upward Dependant Size: %f %f\n", widget->computed_size[AXIS_X], widget->computed_size[AXIS_Y]);
+    LayoutUpwardsDependentSize(widget->first);
+    LayoutUpwardsDependentSize(widget->next);
+}
+
+void LayoutDownwardDependentSize(UI_widget *widget)
+{
+    if (!widget)
+    {
+        return;
+    }
+    LayoutDownwardDependentSize(widget->first);
+    LayoutDownwardDependentSize(widget->next);
+
+    switch (widget->size[AXIS_X].kind)
+    {
+        case UI_SIZEKIND_SUM_CHILDREN:
+        {
+            i32 size_x_children_sum = 0;
+            for (UI_widget *child = widget->first; child != NULL; child = child->next)
+            {
+                size_x_children_sum += child->computed_size[AXIS_X];
+            }
+            widget->computed_size[AXIS_X] = size_x_children_sum;
+            break;
+        }
+        default:
+            break;
+    }
+    switch (widget->size[AXIS_Y].kind)
+    {
+        case UI_SIZEKIND_SUM_CHILDREN:
+        {
+            i32 size_y_children_sum = 0;
+            for (UI_widget *child = widget->first; child != NULL; child = child->next)
+            {
+                size_y_children_sum += child->computed_size[AXIS_Y];
+            }
+            widget->computed_size[AXIS_Y] = size_y_children_sum;
+            break;
+        }
+        default:
+            break;
+    }
+    DEBUG_LOG("Downward Dependant Size: %f %f\n", widget->computed_size[AXIS_X], widget->computed_size[AXIS_Y]);
+}
+
+void LayoutCalculatePosition(UI_widget *widget)
+{
+    if (!widget)
+    {
+        return;
+    }
+
+    if (!widget->parent)
+    {
+        widget->computed_relative_position[AXIS_X] = 0;
+        widget->computed_relative_position[AXIS_Y] = 0;
+        Rectangle rect = {.x = widget->computed_relative_position[AXIS_X],
+                          .y = widget->computed_relative_position[AXIS_Y],
+                          .width = widget->computed_size[AXIS_X],
+                          .height = widget->computed_size[AXIS_Y]};
+
+        widget->rect = rect;
+    } else
+    {
+        switch (widget->parent->layout_direction)
+        {
+            case AXIS_X:
+                {
+                    widget->computed_relative_position[AXIS_X] = 0;
+                    widget->computed_relative_position[AXIS_Y] = 0;
+                    if (widget->prev)
+                    {
+                        widget->computed_relative_position[AXIS_X] = widget->prev->computed_size[AXIS_X] + widget->prev->computed_relative_position[AXIS_X];
+                    }
+                }
+                break;
+            case AXIS_Y:
+                {
+                    widget->computed_relative_position[AXIS_X] = 0;
+                    widget->computed_relative_position[AXIS_Y] = 0;
+                    if (widget->prev)
+                    {
+                        widget->computed_relative_position[AXIS_Y] = widget->prev->computed_size[AXIS_Y] + widget->prev->computed_relative_position[AXIS_Y];
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+        Rectangle rect = {.x = widget->computed_relative_position[AXIS_X] + widget->parent->rect.x,
+                          .y = widget->computed_relative_position[AXIS_Y] + widget->parent->rect.y,
+                          .width = widget->computed_size[AXIS_X],
+                          .height = widget->computed_size[AXIS_Y]};
+        widget->rect = rect;
+    }
+    i32 parent_id = -1;
+    if (widget->parent)
+    {
+        parent_id = widget->parent->id;
+    }
+    DEBUG_LOG("Widget %d parent %d relative:  %f %f %f %f\n", widget->id, parent_id, widget->computed_relative_position[AXIS_X],
+                                                                                     widget->computed_relative_position[AXIS_Y],
+                                                                                     widget->computed_size[AXIS_X],
+                                                                                     widget->computed_size[AXIS_Y]);
+    DEBUG_LOG("Widget %d parent %d rectangle: %d %d %d %d\n", widget->id, parent_id, widget->rect.x, widget->rect.y, widget->rect.width, widget->rect.height);
+    LayoutCalculatePosition(widget->first);
+    LayoutCalculatePosition(widget->next);
+}
+
+void UI_Layout() {
+    LayoutStandaloneSize(root);
+    LayoutUpwardsDependentSize(root);
+    LayoutDownwardDependentSize(root);
+    LayoutCalculatePosition(root);
+}
+
+void RenderLayout(UI_widget *widget)
+{
+    if (!widget)
+    {
+        return;
+    }
+    RenderRectOutlines(widget->rect, uistyle.border);
+
+    RenderLayout(widget->first);
+    RenderLayout(widget->next);
+}
+
+void UI_Render() 
+{
+    RenderLayout(root);
+}
+
+ui_signal UI_SignalFromWidget(UI_widget *widget)
+{
+    ui_signal signal = {0};
+    return signal;
+}
+
 void UI_Label(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height)
 {
     RenderRectangle(pos_x, pos_y, width, height, uistyle.bg);
     RenderText(pos_x, pos_y, width, height, text, uistyle.fg, WRAP_KIND_WORD, ALIGN_CENTER);
 }
+
 b32 UI_Button(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height) {
     if (uistate.mouse_x > pos_x &&
         uistate.mouse_y > pos_y &&
