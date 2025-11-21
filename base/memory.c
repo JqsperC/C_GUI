@@ -5,6 +5,14 @@
 
 #include "base.h"
 
+void ZeroMemory(void *mem, u32 n)
+{
+    for (u32 i = 0; i < n; i++)
+    {
+        *(u8 *)(mem + i) = 0;
+    }
+}
+
 Arena *ArenaAllocate(){
     Arena *arena = malloc(sizeof(Arena));
     arena->capacity = ARENA_STANDARD_SIZE;
@@ -80,4 +88,51 @@ void ArenaClearZero(Arena *arena){
 }
 
 
+void *PoolAlloc(Pool *p)
+{
+    PoolNode *node = p->head;
+    p->head = p->head->next;
+    ZeroMemory(node, p->chunk_size);
+    return node;
+}
+
+
+void PoolFree(Pool *p, void *ptr)
+{
+    if (ptr == NULL)
+    {
+        return;
+    }
+    void *start = p->buffer;
+    void *end = &p->buffer[p->buffer_len];
+    if (ptr < start ||ptr > end)
+    {
+        DEBUG_LOG("Memory out of bounds for pool");
+        return;
+    }
+    PoolNode *node = ptr;
+    node->next = p->head;
+    p->head = node;
+}
+
+void PoolClear(Pool *p)
+{
+    u32 num_chunks = p->buffer_len / p->chunk_size;
+    for (u32 i = 0; i < num_chunks; i++)
+    {
+        void *ptr = &p->buffer[i * p->chunk_size];
+        PoolNode *node = ptr;
+        node->next = p->head;
+        p->head = node;
+    }
+}
+
+void PoolInit(Pool *p, void *backing_buffer, u32 backing_buffer_length,u32 chunk_size)
+{
+    p->chunk_size = chunk_size;
+    p->buffer_len = backing_buffer_length;
+    p->buffer = backing_buffer;
+    p->head = NULL;
+    PoolClear(p);
+}
 #endif

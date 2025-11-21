@@ -175,6 +175,11 @@ i32 GetTextRenderLineWidth (u8 *string, i32 width, text_wrap_kind wrap)
     return line_width;
 }
 
+void RenderTextRect(Rectangle rect, u8 *string, ColorRGBX color, text_wrap_kind wrap, text_align_kind align)
+{
+    RenderText(rect.x, rect.y, rect.width, rect.height, string, color, wrap, align);
+}
+
 void RenderText(i32 pos_x, i32 pos_y, i32 width, i32 height, u8 *string, ColorRGBX color, text_wrap_kind wrap, text_align_kind align)
 {
     if (!string) {

@@ -6,7 +6,7 @@
 
 static UI_widget *widget_list[256];
 static i32 widget_list_idx = 0;
-static UI_widget *GetWidgetByID(i32 id)
+static UI_widget *GetWidgetByID(u64 id)
 {
     for (i32 i = 0; i < widget_list_idx; i++) 
     {
@@ -50,9 +50,8 @@ void UI_SetStyle(ui_style style){
     uistyle = style;
 }
 
-
-void UI_StyleSetFont(char *file){
-    DEBUG_LOG("TODO: UI Style_font\n");
+void UI_StyleSetFont(char *file, i32 size){
+    LoadFont(file, size);
 }
 
 void UI_StyleSetFGColor(ColorRGBX color){
@@ -77,15 +76,17 @@ void UI_Begin(i32 mouse_x, i32 mouse_y, b32 mouse_down, i32 width, i32 height){
     uistate.mouse_x = mouse_x;
     uistate.mouse_y = mouse_y;
 
-    uistate.id = 0;
     uistate.hot = 0;
+
+    root = NULL;
+    parent = NULL;
 
     ui_size size[AXIS_COUNT];
     size[AXIS_X].kind = UI_SIZEKIND_PIXELS;
     size[AXIS_X].value = width;
     size[AXIS_Y].kind = UI_SIZEKIND_PIXELS;
     size[AXIS_Y].value = height;
-    UI_widget *widget = UI_MakeWidget(0, NULL, size);
+    UI_widget *widget = UI_MakeWidget("Root widget", 0, size);
 
     root = widget;
     parent = widget;
@@ -96,7 +97,7 @@ void UI_End(){
     if (!uistate.left_mouse_down) {
         uistate.active = 0;
     } else if (!uistate.active){
-        uistate.active = -1;
+        uistate.active = 0;
     }
 }
 
@@ -112,12 +113,19 @@ UI_widget *UI_PopParent(){
     return parent;
 }
 
-i32 UI_Key(){
+u64 UI_Key()
+{
     return current_id++;
 }
 
-UI_widget *UI_MakeWidget(ui_widget_flags flags, u8 *string, ui_size size[AXIS_COUNT]){
-    i32 id = UI_Key();
+u64 UI_KeyString(u8 *str)
+{
+    u64 key = hash(str);
+    return key;
+}
+
+UI_widget *UI_MakeWidget(u8 *label, ui_widget_flags flags, ui_size size[AXIS_COUNT]){
+    u64 id = UI_KeyString(label);
     UI_widget *widget = GetWidgetByID(id);
     if (!widget)
     {
@@ -137,7 +145,7 @@ UI_widget *UI_MakeWidget(ui_widget_flags flags, u8 *string, ui_size size[AXIS_CO
     widget->last = NULL;
     widget->next = NULL;
     widget->prev = NULL;
-    if (id == 0)
+    if (!parent)
     {
         return widget;
     }
@@ -153,7 +161,6 @@ UI_widget *UI_MakeWidget(ui_widget_flags flags, u8 *string, ui_size size[AXIS_CO
     }
     return widget;
 }
-
 
 void LayoutStandaloneSize(UI_widget *widget)
 {
@@ -359,6 +366,10 @@ void RenderLayout(UI_widget *widget)
             RenderRect(widget->rect, uistyle.active);
         }
     }
+    if (UI_WIDGETFLAG_DRAW_TEXT & widget->flags)
+    {
+        RenderTextRect(widget->rect, "Test", uistyle.fg, WRAP_KIND_WORD, ALIGN_CENTER);
+    }
     RenderLayout(widget->first);
     RenderLayout(widget->next);
 }
@@ -416,9 +427,9 @@ ui_signal UI_SignalFromWidget(UI_widget *widget)
     return signal;
 }
 
-void UI_StartLayoutBlock(ui_size size[2], ui_layout_axis layout_direction)
+void UI_StartLayoutBlock(u8 *label, ui_size size[2], ui_layout_axis layout_direction)
 {
-    UI_widget *widget = UI_MakeWidget(0, NULL, size);
+    UI_widget *widget = UI_MakeWidget(label, 0, size);
     UI_PushParent(widget, layout_direction);
 }
 
@@ -427,7 +438,7 @@ void UI_EndLayoutBlock()
     UI_PopParent();
 }
 
-void UI_StartGroup(ui_layout_axis layout_direction, b32 *show_group)
+void UI_StartGroup(u8 *label, u8 *button_label, ui_layout_axis layout_direction, b32 *show_group)
 {
     ui_size layout_axis = {.kind = UI_SIZEKIND_SUM_CHILDREN, .value = 0};
     ui_size other_axis  = {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1};
@@ -435,8 +446,8 @@ void UI_StartGroup(ui_layout_axis layout_direction, b32 *show_group)
     size_group[layout_direction] = layout_axis;
     size_group[AXIS_Y - layout_direction] = other_axis;
 
-    UI_StartLayoutBlock(size_group, layout_direction);
-    if (UI_Button("", (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1},{.kind = UI_SIZEKIND_PIXELS, .value = 50}}).clicked)
+    UI_StartLayoutBlock(label, size_group, layout_direction);
+    if (UI_Button(button_label, (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1},{.kind = UI_SIZEKIND_PIXELS, .value = 50}}).clicked)
     {
         *show_group = !*show_group;
     }
@@ -453,13 +464,14 @@ void UI_Label(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height)
     RenderText(pos_x, pos_y, width, height, text, uistyle.fg, WRAP_KIND_WORD, ALIGN_CENTER);
 }
 
-ui_signal UI_Button(char *text, ui_size size[AXIS_COUNT]) {
-    UI_widget *widget = UI_MakeWidget(UI_WIDGETFLAG_CLICKABLE |
-                                      UI_WIDGETFLAG_HOVERABLE |
-                                      UI_WIDGETFLAG_DRAW_BACKGROUND |
-                                      UI_WIDGETFLAG_DRAW_BORDER,
-                                      "Button",
-                                      size);
+ui_signal UI_Button(u8 *label, ui_size size[AXIS_COUNT]) {
+    UI_widget *widget = UI_MakeWidget(label,
+            UI_WIDGETFLAG_CLICKABLE |
+            UI_WIDGETFLAG_HOVERABLE |
+            UI_WIDGETFLAG_DRAW_BACKGROUND |
+            UI_WIDGETFLAG_DRAW_BORDER|
+            UI_WIDGETFLAG_DRAW_TEXT,
+            size);
     ui_signal signal = UI_SignalFromWidget(widget);
     return signal;
 }

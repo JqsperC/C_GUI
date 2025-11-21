@@ -103,5 +103,6 @@ b32 InitializeTextRenderer();
 b32 LoadFont(char *filename, i32 size);
 i32 RenderCharacter(i32 pos_x, i32 pos_y, u8 character, ColorRGBX color);
 void RenderText(i32 pos_x, i32 pos_y, i32 width, i32 height, u8 *string, ColorRGBX color, text_wrap_kind wrap, text_align_kind align);
+void RenderTextRect(Rectangle rect, u8 *string, ColorRGBX color, text_wrap_kind wrap, text_align_kind align);
 
 #endif

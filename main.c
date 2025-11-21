@@ -57,7 +57,6 @@ b32 EventLoop(sdl_ui_state *ui_state_old, Arena *arena_framebuffer){
                 SDL_Renderer *renderer = SDL_GetRenderer(window);
                 SDLResizeBuffer(arena_framebuffer, renderer, dimension.width, dimension.height);
                 }
-
         }
     }
     ui_state_new.mouse_rel_x = ui_state_new.mouse_x - ui_state_old->mouse_x;
@@ -101,6 +100,7 @@ int main(){
     
     f32 seconds_per_frame = 1.0f / FRAMERATE;
     u64 last_counter = SDL_GetPerformanceCounter();
+
     UI_SetStyle((ui_style)
             {
             .border = (ColorRGBX) {.green = 255, .blue = 255},
@@ -124,46 +124,66 @@ int main(){
 
         v2f32 window_size = GetWindowSize();
         UI_Begin(ui_state.mouse_x, ui_state.mouse_y, ui_state.left_mouse_down, window_size.x - 1, window_size.y - 1);
-        UI_StartLayoutBlock((ui_size[2]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_X);
+        UI_StartLayoutBlock("Block 1", (ui_size[2])
+                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_X);
         {
-        UI_StartLayoutBlock((ui_size[2]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.3}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_Y);
-        {
-        UI_StartLayoutBlock((ui_size[2]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.05}}, AXIS_X);
-        UI_Button("", (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
-        UI_Button("", (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
-        UI_Button("", (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
-        UI_Button("", (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
-        UI_EndLayoutBlock();
-        }
-        UI_StartGroup(AXIS_Y, &show_sidebar_group1);
-        {
-        if (show_sidebar_group1)
-        {
-            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-        }
-        }
-        UI_EndGroup();
-        UI_StartGroup(AXIS_Y, &show_sidebar_group2);
-        {
-        if (show_sidebar_group2)
-        {
-            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-        }
-        }
-        UI_EndGroup();
+            UI_StartLayoutBlock("Block 2", (ui_size[2])
+                    {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.3}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_Y);
+            {
+                UI_StartLayoutBlock("Block 3", (ui_size[2])
+                        {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.05}}, AXIS_X);
+                {
+                    UI_Button("Button 1", (ui_size[AXIS_COUNT])
+                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+                    UI_Button("Button 2", (ui_size[AXIS_COUNT])
+                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+                    UI_Button("Button 3", (ui_size[AXIS_COUNT])
+                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+                    UI_Button("BUtton 4", (ui_size[AXIS_COUNT])
+                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+                }
+                UI_EndLayoutBlock();
+                UI_StartGroup("Group 1", "Group 1Button", AXIS_Y, &show_sidebar_group1);
+                {
+                    if (show_sidebar_group1)
+                    {
+                        UI_MakeWidget("Group 1 Box 1", 0, (ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                        UI_MakeWidget("Group 1 Box 2", 0, (ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                        UI_MakeWidget("Group 1 Box 3", 0, (ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                    }
+                }
+                UI_EndGroup();
+                UI_StartGroup("Group 2", "Group 2 Button", AXIS_Y, &show_sidebar_group2);
+                {
+                    if (show_sidebar_group2)
+                    {
+                        UI_MakeWidget("Group 2 Box 1", 0,(ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                        UI_MakeWidget("Group 2 Box 2", 0,(ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                        UI_MakeWidget("Group 2 Box 3", 0,(ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                        UI_MakeWidget("Group 2 Box 4", 0,(ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                    }
+                }
+                UI_EndGroup();
+            }
+            UI_EndLayoutBlock();
+            UI_StartLayoutBlock("Block 4", (ui_size[2])
+                    {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.7}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_Y);
+            {
+                UI_StartLayoutBlock("Block 5", (ui_size[2])
+                        {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1},{.kind = UI_SIZEKIND_PIXELS, .value = 100}}, AXIS_X);
+                UI_EndLayoutBlock();
+            }
+            UI_EndLayoutBlock();
 
-        UI_EndLayoutBlock();
-        UI_StartLayoutBlock((ui_size[2]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.7}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_Y);
-        {
-        }
         }
         UI_EndLayoutBlock();
-
         UI_Layout();
         UI_Render();
 

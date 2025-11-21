@@ -2,6 +2,7 @@
 #define BASE_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #define ArrayCount(Array) (sizeof(Array)/(sizeof((Array)[0])))
 #define Kilobytes(Value) ((u64)(Value) * 1024)
@@ -54,6 +55,29 @@ void ArenaPop(Arena*, u64);
 void ArenaClear(Arena*);
 void ArenaClearZero(Arena*);
 
+/* Pool Alocator */
+
+
+typedef struct PoolNode PoolNode;
+struct PoolNode {
+    struct PoolNode *next;
+};
+
+typedef struct Pool Pool;
+struct Pool{
+    u8 *buffer;
+    u64 buffer_len;
+    u64 chunk_size;
+
+    PoolNode *head;
+};
+
+void PoolInit(Pool *p, void *backing_buffer, u32 backing_buffer_length,u32 chunk_size);
+void PoolClear(Pool *p);
+
+void *PoolAlloc(Pool *p);
+void PoolFree(Pool *p, void *ptr);
+
 /* STRINGS */
 typedef struct _string8 {
     u32 size;
@@ -83,5 +107,9 @@ i32 min(i32, i32);
 i32 max(i32, i32);
 
 b32 IsPointInRectangle(i32, i32, Rectangle);
+
+/*HASH (TABLE?)*/
+/* djb2 hash function */
+u64 hash(u8 *str);
 
 #endif
