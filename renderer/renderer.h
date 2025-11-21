@@ -50,6 +50,7 @@ typedef struct {
 
 void DestroyBackbuffer();
 sdl_window_dimension SDLGetWindowSize(SDL_Window* window);
+v2f32 GetWindowSize();
 
 ColorRGBX BlendRGBXARGB(ColorRGBX background, ColorARGB foreground);
 

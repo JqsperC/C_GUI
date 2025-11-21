@@ -15,6 +15,18 @@ Arena *ArenaAllocate(){
     }
     return arena;
 }
+
+Arena *ArenaAllocateFixedSize(u64 size){
+    Arena *arena = malloc(sizeof(Arena));
+    arena->capacity = size;
+    arena->memory_base = malloc(size);
+    arena->offset = 0;
+    if (arena->memory_base == NULL){
+        return NULL;
+    }
+    return arena;
+}
+
 void ArenaRelease(Arena *arena){
     if (arena){
         free(arena->memory_base);
@@ -33,7 +45,7 @@ void *ArenaPush(Arena *arena, u64 size){
 }
 void *ArenaPushZero(Arena *arena, u64 size){
     void *memory = ArenaPush(arena, size);
-    for (int i = 0; i < size; i++) {
+    for (u64 i = 0; i < size; i++) {
         *(((char*)memory)+i) = 0;
     }
     return memory;
@@ -62,7 +74,7 @@ void ArenaClear(Arena *arena){
 
 void ArenaClearZero(Arena *arena){
     arena->offset = 0;
-    for (int i = 0; i < arena->capacity; i++){
+    for (u64 i = 0; i < arena->capacity; i++){
         *((u8*)(arena->memory_base)+i) = 0;
     }
 }

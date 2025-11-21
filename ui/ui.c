@@ -191,7 +191,6 @@ void LayoutStandaloneSize(UI_widget *widget)
             break;
         }
     }
-    DEBUG_LOG("Standalone Size: %f %f \n", widget->computed_size[AXIS_X], widget->computed_size[AXIS_Y]);
     LayoutStandaloneSize(widget->next);
     LayoutStandaloneSize(widget->first);
 }
@@ -223,7 +222,6 @@ void LayoutUpwardsDependentSize(UI_widget *widget)
         default:
             break;
     }
-    DEBUG_LOG("Upward Dependant Size: %f %f\n", widget->computed_size[AXIS_X], widget->computed_size[AXIS_Y]);
     LayoutUpwardsDependentSize(widget->first);
     LayoutUpwardsDependentSize(widget->next);
 }
@@ -267,7 +265,6 @@ void LayoutDownwardDependentSize(UI_widget *widget)
         default:
             break;
     }
-    DEBUG_LOG("Downward Dependant Size: %f %f\n", widget->computed_size[AXIS_X], widget->computed_size[AXIS_Y]);
 }
 
 void LayoutCalculatePosition(UI_widget *widget)
@@ -320,16 +317,6 @@ void LayoutCalculatePosition(UI_widget *widget)
                           .height = widget->computed_size[AXIS_Y]};
         widget->rect = rect;
     }
-    i32 parent_id = -1;
-    if (widget->parent)
-    {
-        parent_id = widget->parent->id;
-    }
-    DEBUG_LOG("Widget %d parent %d relative:  %f %f %f %f\n", widget->id, parent_id, widget->computed_relative_position[AXIS_X],
-                                                                                     widget->computed_relative_position[AXIS_Y],
-                                                                                     widget->computed_size[AXIS_X],
-                                                                                     widget->computed_size[AXIS_Y]);
-    DEBUG_LOG("Widget %d parent %d rectangle: %d %d %d %d\n", widget->id, parent_id, widget->rect.x, widget->rect.y, widget->rect.width, widget->rect.height);
     LayoutCalculatePosition(widget->first);
     LayoutCalculatePosition(widget->next);
 }
@@ -347,7 +334,31 @@ void RenderLayout(UI_widget *widget)
     {
         return;
     }
-    RenderRectOutlines(widget->rect, uistyle.border);
+    if (UI_WIDGETFLAG_DRAW_BACKGROUND & widget->flags)
+    {
+        RenderRect(widget->rect, uistyle.bg);
+    }
+
+    if (UI_WIDGETFLAG_DRAW_BORDER & widget->flags)
+    {
+        RenderRectOutlines(widget->rect, uistyle.border);
+    }
+
+    if (UI_WIDGETFLAG_HOVERABLE & widget->flags)
+    {
+        if (uistate.hot == widget->id && uistate.active == 0)
+        {
+            RenderRect(widget->rect, uistyle.hover);
+        }
+    }
+
+    if (UI_WIDGETFLAG_CLICKABLE & widget->flags)
+    {
+        if (uistate.active == widget->id)
+        {
+            RenderRect(widget->rect, uistyle.active);
+        }
+    }
 
     RenderLayout(widget->first);
     RenderLayout(widget->next);
@@ -361,7 +372,45 @@ void UI_Render()
 ui_signal UI_SignalFromWidget(UI_widget *widget)
 {
     ui_signal signal = {0};
+    if (UI_WIDGETFLAG_CLICKABLE & widget->flags)
+    {
+        if (uistate.mouse_x > widget->rect.x &&
+                uistate.mouse_y > widget->rect.y &&
+                uistate.mouse_x < widget->rect.x + widget->rect.width &&
+                uistate.mouse_y < widget->rect.y + widget->rect.height)
+        {
+            uistate.hot = widget->id;
+            if (uistate.left_mouse_down &&
+                uistate.active == 0)
+            {
+                uistate.active = widget->id;
+                signal.pressed = true;
+            }
+        }
+        if (uistate.active == widget->id && uistate.hot == widget->id && !uistate.left_mouse_down)
+        {
+            signal.clicked = true;
+        }
+    }
+    if (UI_WIDGETFLAG_HOVERABLE & widget->flags)
+    {
+        if (uistate.hot == widget->id && uistate.active == 0)
+        {
+            signal.hover = true;
+        }
+    }
     return signal;
+}
+
+void UI_StartLayoutBlock(ui_size size[2], ui_layout_axis layout_direction)
+{
+    UI_widget *widget = UI_MakeWidget(0, NULL, size);
+    UI_PushParent(widget, layout_direction);
+}
+
+void UI_EndLayoutBlock()
+{
+    UI_PopParent();
 }
 
 void UI_Label(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height)
@@ -370,28 +419,20 @@ void UI_Label(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height)
     RenderText(pos_x, pos_y, width, height, text, uistyle.fg, WRAP_KIND_WORD, ALIGN_CENTER);
 }
 
-b32 UI_Button(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height) {
-    if (uistate.mouse_x > pos_x &&
-        uistate.mouse_y > pos_y &&
-        uistate.mouse_x < pos_x + width &&
-        uistate.mouse_y < pos_y + height) {
-        uistate.hot = id;
-        if (uistate.active == 0 && uistate.left_mouse_down) {
-            uistate.active = id;
-        }
-    }
-    ColorRGBX color = uistyle.fg;
-    if (uistate.active == id && uistate.hot == id) {
-        color = uistyle.active;
-    } else if (uistate.hot == id) {
-        color = uistyle.hover;
-    } else if (uistate.active == id) {
-        color = uistyle.active;
-    }
-    RenderRectangle(pos_x, pos_y, width, height, color);
-    RenderText(pos_x, pos_y, width, height, text, uistyle.fg, WRAP_KIND_WORD, ALIGN_CENTER);
-    b32 button_clicked = uistate.active == id && uistate.hot == id && !uistate.left_mouse_down;
-    return button_clicked;
+ui_signal UI_Button(char *text) {
+    UI_widget *widget = UI_MakeWidget(UI_WIDGETFLAG_CLICKABLE |
+                                      UI_WIDGETFLAG_HOVERABLE |
+                                      UI_WIDGETFLAG_DRAW_BACKGROUND |
+                                      UI_WIDGETFLAG_DRAW_BORDER,
+                                      "Button",
+                                      (ui_size[AXIS_COUNT])
+                                      {
+                                      (ui_size) {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},
+                                      (ui_size) {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}
+                                      }
+                                      );
+    ui_signal signal = UI_SignalFromWidget(widget);
+    return signal;
 }
 
 

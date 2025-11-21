@@ -38,6 +38,7 @@ typedef struct _arena {
 } Arena;
 
 Arena *ArenaAllocate();
+Arena *ArenaAllocateFixedSize(u64 size);
 void ArenaRelease(Arena*);
 
 void *ArenaPush(Arena*, u64);
@@ -61,6 +62,15 @@ typedef struct _string8 {
 
 u64 c_string_len(u8*);
 /* MATH*/
+
+typedef union {
+    struct {
+        f32 x;
+        f32 y;
+    };
+    f32 v[2];
+} v2f32;
+
 
 typedef struct {
     i32 x;

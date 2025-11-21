@@ -18,6 +18,10 @@ sdl_window_dimension SDLGetWindowSize(SDL_Window* window) {
     return result;
 }
 
+v2f32 GetWindowSize()
+{
+    return (v2f32){.x = backbuffer.width, .y = backbuffer.height};
+}
 ColorRGBX BlendRGBXARGB(ColorRGBX background, ColorARGB foreground) {
     f32 fg = foreground.alpha / 255.0;
     f32 bg = 1 - fg;
@@ -100,6 +104,7 @@ void SDLResizeBuffer(Arena *arena, SDL_Renderer *renderer, i32 width, i32 height
                                 SDL_TEXTUREACCESS_STREAMING,
                                 width,
                                 height);
+    ArenaClear(arena);
     backbuffer.memory = ArenaPush(arena, width * height * bytes_per_pixel);
     backbuffer.width  = width;
     backbuffer.height = height;

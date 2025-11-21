@@ -23,7 +23,7 @@ typedef struct {
     i32 mouse_rel_y;
 } sdl_ui_state;
 
-b32 EventLoop(sdl_ui_state *ui_state_old){
+b32 EventLoop(sdl_ui_state *ui_state_old, Arena *arena_framebuffer){
     SDL_Event event;
     sdl_ui_state ui_state_new = *ui_state_old;
     ui_state_new.left_mouse_was_down = ui_state_old->left_mouse_down;
@@ -50,6 +50,14 @@ b32 EventLoop(sdl_ui_state *ui_state_old){
                     ui_state_new.left_mouse_down = event.button.down;
                 }
                 break;
+            case SDL_EVENT_WINDOW_RESIZED:
+                {
+                SDL_Window *window = SDL_GetWindowFromEvent(&event);
+                sdl_window_dimension dimension = SDLGetWindowSize(window);
+                SDL_Renderer *renderer = SDL_GetRenderer(window);
+                SDLResizeBuffer(arena_framebuffer, renderer, dimension.width, dimension.height);
+                }
+
         }
     }
     ui_state_new.mouse_rel_x = ui_state_new.mouse_x - ui_state_old->mouse_x;
@@ -64,13 +72,12 @@ static f32 SDLGetSecondsElapsed(u64 OldCounter, u64 CurrentCounter)
     return ((f32)(CurrentCounter - OldCounter) / (f32)(SDL_GetPerformanceFrequency()));
 }
 
-
 int main(){
     printf("%lu\n", sizeof(ColorARGB));
     SDL_Window *window;
     SDL_Renderer *renderer;
     sdl_window_dimension dimension;
-    Arena *arena_permanent = ArenaAllocate();
+    Arena *arena_framebuffer = ArenaAllocateFixedSize(1920 * 1080 * 4 * 10);
 
     if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
         printf("Failed to initialize SDL: %s\n", SDL_GetError());
@@ -81,6 +88,8 @@ int main(){
         printf("Failed to create Window/Rendere: %s\n", SDL_GetError());
         return -1;
     }
+
+    SDL_SetWindowResizable(window, true);
     
     if (!InitializeTextRenderer()){
         return -1;
@@ -92,40 +101,42 @@ int main(){
     
     f32 seconds_per_frame = 1.0f / FRAMERATE;
     u64 last_counter = SDL_GetPerformanceCounter();
-    UI_SetStyle(
-            (ui_style)
-            {.border = (ColorRGBX){.red = 255}}
-            );
-    UI_StyleSetFGColor((ColorRGBX){.red = 255, .green = 255, .blue = 255} );
-    UI_StyleSetBGColor((ColorRGBX) {});
-    UI_StyleSetHoverColor((ColorRGBX) {.blue = 255});
-    UI_StyleSetActiveColor((ColorRGBX) {.red = 255});
+    UI_SetStyle((ui_style)
+            {
+            .border = (ColorRGBX) {.red = 255},
+            .fg = (ColorRGBX) {.red = 255, .green = 255, .blue = 255},
+            .bg = (ColorRGBX) {0},
+            .hover = (ColorRGBX) {.blue = 255},
+            .active = (ColorRGBX) {.green = 255},
+            });
+
     sdl_ui_state ui_state;
     dimension = SDLGetWindowSize(window);
-    SDLResizeBuffer(arena_permanent, renderer, dimension.width, dimension.height);
+    SDLResizeBuffer(arena_framebuffer, renderer, dimension.width, dimension.height);
 
-    while(EventLoop(&ui_state)){
+    while(EventLoop(&ui_state, arena_framebuffer)){
 
         FlushBuffer();
 
+        v2f32 window_size = GetWindowSize();
+        UI_Begin(ui_state.mouse_x, ui_state.mouse_y, ui_state.left_mouse_down, window_size.x - 1, window_size.y - 1);
 
+        UI_StartLayoutBlock((ui_size[2]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 300}}, AXIS_X);
 
-        UI_Begin(ui_state.mouse_x, ui_state.mouse_y, ui_state.left_mouse_down, WINDOW_WIDTH - 1, WINDOW_HEIGHT - 1);
+        if (UI_Button("test").clicked){
+            DEBUG_LOG("Clicked button 1\n");
+        }
+        if (UI_Button("test").clicked){
+            DEBUG_LOG("Clicked button 2\n");
+        }
+        if (UI_Button("test").clicked){
+            DEBUG_LOG("Clicked button 3\n");
+        }
+        if (UI_Button("test").clicked){
+            DEBUG_LOG("Clicked button 4\n");
+        }
+        UI_EndLayoutBlock();
 
-
-        UI_widget *widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 200, .kind = UI_SIZEKIND_PIXELS}});
-        UI_PushParent(widget, AXIS_X);
-        
-        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 0.25, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}});
-        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 0.5, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}});
-        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 0.25, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}});
-
-        UI_PopParent();
-        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 300, .kind = UI_SIZEKIND_PIXELS}});
-        UI_PushParent(widget, AXIS_Y);
-        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 50, .kind = UI_SIZEKIND_PIXELS}});
-        widget = UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]){{.value = 1, .kind = UI_SIZEKIND_PARENT_PERCENT}, {.value = 50, .kind = UI_SIZEKIND_PIXELS}});
-        UI_PopParent();
         UI_Layout();
         UI_Render();
 
@@ -133,16 +144,14 @@ int main(){
         SDLRenderBufferToWindow(renderer);
 
         //Framerate
-
-        DEBUG_LOG("Rendered frame in %.6f ms\n", SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()) * 1000);
-
+        // DEBUG_LOG("Rendered frame in %.6f ms\n", SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()) * 1000);
         while (SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()) < seconds_per_frame)
         {
             SDL_Delay((seconds_per_frame - SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter())) * 1000);
         }
-        DEBUG_LOG("Running at %.2f fps\n", 1.0f / SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()));
+        // DEBUG_LOG("Running at %.2f fps\n", 1.0f / SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()));
         last_counter = SDL_GetPerformanceCounter();
     }
     DestroyBackbuffer();
-    ArenaRelease(arena_permanent);
+    ArenaRelease(arena_framebuffer);
 }

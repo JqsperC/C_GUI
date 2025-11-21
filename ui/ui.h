@@ -47,10 +47,11 @@ typedef enum {
 typedef u32 ui_widget_flags;
 enum {
     UI_WIDGETFLAG_CLICKABLE       = (1<<0),
-    UI_WIDGETFLAG_DRAW_TEXT       = (1<<1),
-    UI_WIDGETFLAG_DRAW_BORDER     = (1<<2),
-    UI_WIDGETFLAG_DRAW_BACKGROUND = (1<<3),
-    UI_WIDGETFLAG_VIEW_SCROLL     = (1<<4),
+    UI_WIDGETFLAG_HOVERABLE       = (1<<1),
+    UI_WIDGETFLAG_DRAW_TEXT       = (1<<2),
+    UI_WIDGETFLAG_DRAW_BORDER     = (1<<3),
+    UI_WIDGETFLAG_DRAW_BACKGROUND = (1<<4),
+    UI_WIDGETFLAG_VIEW_SCROLL     = (1<<5),
 };
 
 typedef struct UI_widget {
@@ -113,11 +114,14 @@ void UI_StyleSetActiveColor(ColorRGBX color);
 void UI_Begin(i32 mouse_x, i32 mouse_y, b32 mouse_down, i32 width, i32 height);
 void UI_End();
 
+void UI_StartLayoutBlock(ui_size size[2], ui_layout_axis layout_direction);
+void UI_EndLayoutBlock();
+
 void UI_Layout();
 void UI_Render();
 
 void UI_Label(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height);
-b32 UI_Button(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height);
+ui_signal UI_Button(char *text);
 void UI_Checkbox(char *text, i32 id, i32 pos_x, i32 pos_y, i32 size, b32 *value);
 void UI_Selector(char **text, i32 id, i32 pos_x, i32 pos_y, i32 size, i32 n, i32 *selection);
 void UI_Slider(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height, f32 min, f32 max, f32 *value);
