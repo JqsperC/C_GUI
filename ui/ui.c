@@ -359,14 +359,28 @@ void RenderLayout(UI_widget *widget)
             RenderRect(widget->rect, uistyle.active);
         }
     }
-
     RenderLayout(widget->first);
     RenderLayout(widget->next);
+}
+
+void LayoutDebugRects(UI_widget *widget)
+{
+    if (!widget)
+    {
+        return;
+    }
+    RenderRectOutlines(widget->rect, uistyle.debug);
+    LayoutDebugRects(widget->first);
+    LayoutDebugRects(widget->next);
+    
 }
 
 void UI_Render() 
 {
     RenderLayout(root);
+#ifdef DEBUG
+    LayoutDebugRects(root);
+#endif
 }
 
 ui_signal UI_SignalFromWidget(UI_widget *widget)
@@ -413,24 +427,39 @@ void UI_EndLayoutBlock()
     UI_PopParent();
 }
 
+void UI_StartGroup(ui_layout_axis layout_direction, b32 *show_group)
+{
+    ui_size layout_axis = {.kind = UI_SIZEKIND_SUM_CHILDREN, .value = 0};
+    ui_size other_axis  = {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1};
+    ui_size size_group[AXIS_COUNT];
+    size_group[layout_direction] = layout_axis;
+    size_group[AXIS_Y - layout_direction] = other_axis;
+
+    UI_StartLayoutBlock(size_group, layout_direction);
+    if (UI_Button("", (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1},{.kind = UI_SIZEKIND_PIXELS, .value = 50}}).clicked)
+    {
+        *show_group = !*show_group;
+    }
+}
+
+void UI_EndGroup()
+{
+    UI_EndLayoutBlock();
+}
+
 void UI_Label(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height)
 {
     RenderRectangle(pos_x, pos_y, width, height, uistyle.bg);
     RenderText(pos_x, pos_y, width, height, text, uistyle.fg, WRAP_KIND_WORD, ALIGN_CENTER);
 }
 
-ui_signal UI_Button(char *text) {
+ui_signal UI_Button(char *text, ui_size size[AXIS_COUNT]) {
     UI_widget *widget = UI_MakeWidget(UI_WIDGETFLAG_CLICKABLE |
                                       UI_WIDGETFLAG_HOVERABLE |
                                       UI_WIDGETFLAG_DRAW_BACKGROUND |
                                       UI_WIDGETFLAG_DRAW_BORDER,
                                       "Button",
-                                      (ui_size[AXIS_COUNT])
-                                      {
-                                      (ui_size) {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},
-                                      (ui_size) {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}
-                                      }
-                                      );
+                                      size);
     ui_signal signal = UI_SignalFromWidget(widget);
     return signal;
 }

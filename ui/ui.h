@@ -89,6 +89,7 @@ typedef struct {
     ColorRGBX hover;
     ColorRGBX active;
     ColorRGBX border;
+    ColorRGBX debug;
 
 } ui_style;
 
@@ -117,11 +118,14 @@ void UI_End();
 void UI_StartLayoutBlock(ui_size size[2], ui_layout_axis layout_direction);
 void UI_EndLayoutBlock();
 
+void UI_StartGroup(ui_layout_axis layout_direction, b32 *show_group);
+void UI_EndGroup();
+
 void UI_Layout();
 void UI_Render();
 
 void UI_Label(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height);
-ui_signal UI_Button(char *text);
+ui_signal UI_Button(char *text, ui_size size[AXIS_COUNT]);
 void UI_Checkbox(char *text, i32 id, i32 pos_x, i32 pos_y, i32 size, b32 *value);
 void UI_Selector(char **text, i32 id, i32 pos_x, i32 pos_y, i32 size, i32 n, i32 *selection);
 void UI_Slider(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height, f32 min, f32 max, f32 *value);

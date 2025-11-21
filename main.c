@@ -103,9 +103,10 @@ int main(){
     u64 last_counter = SDL_GetPerformanceCounter();
     UI_SetStyle((ui_style)
             {
-            .border = (ColorRGBX) {.red = 255},
+            .border = (ColorRGBX) {.green = 255, .blue = 255},
+            .debug = (ColorRGBX) {.red = 255},
             .fg = (ColorRGBX) {.red = 255, .green = 255, .blue = 255},
-            .bg = (ColorRGBX) {0},
+            .bg = (ColorRGBX) {.red = 20, .green = 30, .blue = 60},
             .hover = (ColorRGBX) {.blue = 255},
             .active = (ColorRGBX) {.green = 255},
             });
@@ -114,26 +115,52 @@ int main(){
     dimension = SDLGetWindowSize(window);
     SDLResizeBuffer(arena_framebuffer, renderer, dimension.width, dimension.height);
 
+    b32 show_sidebar_group1 = false;
+    b32 show_sidebar_group2 = false;
+
     while(EventLoop(&ui_state, arena_framebuffer)){
 
         FlushBuffer();
 
         v2f32 window_size = GetWindowSize();
         UI_Begin(ui_state.mouse_x, ui_state.mouse_y, ui_state.left_mouse_down, window_size.x - 1, window_size.y - 1);
+        UI_StartLayoutBlock((ui_size[2]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_X);
+        {
+        UI_StartLayoutBlock((ui_size[2]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.3}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_Y);
+        {
+        UI_StartLayoutBlock((ui_size[2]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.05}}, AXIS_X);
+        UI_Button("", (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+        UI_Button("", (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+        UI_Button("", (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+        UI_Button("", (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+        UI_EndLayoutBlock();
+        }
+        UI_StartGroup(AXIS_Y, &show_sidebar_group1);
+        {
+        if (show_sidebar_group1)
+        {
+            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+        }
+        }
+        UI_EndGroup();
+        UI_StartGroup(AXIS_Y, &show_sidebar_group2);
+        {
+        if (show_sidebar_group2)
+        {
+            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+            UI_MakeWidget(0, NULL, (ui_size[AXIS_COUNT]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+        }
+        }
+        UI_EndGroup();
 
-        UI_StartLayoutBlock((ui_size[2]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 300}}, AXIS_X);
-
-        if (UI_Button("test").clicked){
-            DEBUG_LOG("Clicked button 1\n");
+        UI_EndLayoutBlock();
+        UI_StartLayoutBlock((ui_size[2]) {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.7}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_Y);
+        {
         }
-        if (UI_Button("test").clicked){
-            DEBUG_LOG("Clicked button 2\n");
-        }
-        if (UI_Button("test").clicked){
-            DEBUG_LOG("Clicked button 3\n");
-        }
-        if (UI_Button("test").clicked){
-            DEBUG_LOG("Clicked button 4\n");
         }
         UI_EndLayoutBlock();
 
