@@ -2,7 +2,6 @@
 #define UI_C
 
 #include "ui.h"
-#include <stdio.h>
 
 static UI_widget *widget_list[256];
 static i32 widget_list_idx = 0;
@@ -34,12 +33,14 @@ static UI_widget *root;
 static UI_widget *parent;
 
 static Arena *widget_arena;
+static Arena *string_arena;
 
 static i32 current_id;
 
 void UI_Initialize()
 {
     widget_arena = ArenaAllocate();
+    string_arena = ArenaAllocate();
     if (!widget_arena)
     {
         DEBUG_LOG("Failed to initialize UI System\n");
@@ -71,6 +72,7 @@ void UI_StyleSetActiveColor(ColorRGBX color){
 }
 
 void UI_Begin(i32 mouse_x, i32 mouse_y, b32 mouse_down, i32 width, i32 height){
+    ArenaClear(string_arena);
     current_id = 0;
     uistate.left_mouse_down = mouse_down;
     uistate.mouse_x = mouse_x;
@@ -86,7 +88,7 @@ void UI_Begin(i32 mouse_x, i32 mouse_y, b32 mouse_down, i32 width, i32 height){
     size[AXIS_X].value = width;
     size[AXIS_Y].kind = UI_SIZEKIND_PIXELS;
     size[AXIS_Y].value = height;
-    UI_widget *widget = UI_MakeWidget("Root widget", 0, size);
+    UI_widget *widget = UI_MakeWidget(MakeString(string_arena, "Root widget"), 0, size);
 
     root = widget;
     parent = widget;
@@ -118,13 +120,13 @@ u64 UI_Key()
     return current_id++;
 }
 
-u64 UI_KeyString(u8 *str)
+u64 UI_KeyString(String8 string)
 {
-    u64 key = hash(str);
+    u64 key = hash(string);
     return key;
 }
 
-UI_widget *UI_MakeWidget(u8 *label, ui_widget_flags flags, ui_size size[AXIS_COUNT]){
+UI_widget *UI_MakeWidget(String8 label, ui_widget_flags flags, ui_size size[AXIS_COUNT]){
     u64 id = UI_KeyString(label);
     UI_widget *widget = GetWidgetByID(id);
     if (!widget)
@@ -137,6 +139,7 @@ UI_widget *UI_MakeWidget(u8 *label, ui_widget_flags flags, ui_size size[AXIS_COU
     }
     widget->id = id;
     widget->flags = flags;
+    widget->string = label;
     widget->size[AXIS_X] = size[AXIS_X]; 
     widget->size[AXIS_Y] = size[AXIS_Y]; 
 
@@ -368,7 +371,7 @@ void RenderLayout(UI_widget *widget)
     }
     if (UI_WIDGETFLAG_DRAW_TEXT & widget->flags)
     {
-        RenderTextRect(widget->rect, "Test", uistyle.fg, WRAP_KIND_WORD, ALIGN_CENTER);
+        RenderTextRect(widget->rect, widget->string, uistyle.fg, WRAP_KIND_WORD, HORIZONTAL_ALIGN_CENTER, VERTICAL_ALIGN_CENTER);
     }
     RenderLayout(widget->first);
     RenderLayout(widget->next);
@@ -427,7 +430,7 @@ ui_signal UI_SignalFromWidget(UI_widget *widget)
     return signal;
 }
 
-void UI_StartLayoutBlock(u8 *label, ui_size size[2], ui_layout_axis layout_direction)
+void UI_StartLayoutBlock(String8 label, ui_size size[2], ui_layout_axis layout_direction)
 {
     UI_widget *widget = UI_MakeWidget(label, 0, size);
     UI_PushParent(widget, layout_direction);
@@ -438,7 +441,7 @@ void UI_EndLayoutBlock()
     UI_PopParent();
 }
 
-void UI_StartGroup(u8 *label, u8 *button_label, ui_layout_axis layout_direction, b32 *show_group)
+void UI_StartGroup(String8 label, String8 button_label, ui_layout_axis layout_direction, b32 *show_group)
 {
     ui_size layout_axis = {.kind = UI_SIZEKIND_SUM_CHILDREN, .value = 0};
     ui_size other_axis  = {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1};
@@ -458,13 +461,7 @@ void UI_EndGroup()
     UI_EndLayoutBlock();
 }
 
-void UI_Label(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height)
-{
-    RenderRectangle(pos_x, pos_y, width, height, uistyle.bg);
-    RenderText(pos_x, pos_y, width, height, text, uistyle.fg, WRAP_KIND_WORD, ALIGN_CENTER);
-}
-
-ui_signal UI_Button(u8 *label, ui_size size[AXIS_COUNT]) {
+ui_signal UI_Button(String8 label, ui_size size[AXIS_COUNT]) {
     UI_widget *widget = UI_MakeWidget(label,
             UI_WIDGETFLAG_CLICKABLE |
             UI_WIDGETFLAG_HOVERABLE |
@@ -475,96 +472,5 @@ ui_signal UI_Button(u8 *label, ui_size size[AXIS_COUNT]) {
     ui_signal signal = UI_SignalFromWidget(widget);
     return signal;
 }
-
-
-void UI_Checkbox(char *text, i32 id, i32 pos_x, i32 pos_y, i32 size, b32 *value){
-    if (uistate.mouse_x > pos_x &&
-        uistate.mouse_y > pos_y &&
-        uistate.mouse_x < pos_x + size &&
-        uistate.mouse_y < pos_y + size) {
-        uistate.hot = id;
-        if (uistate.active == 0 && uistate.left_mouse_down) {
-            uistate.active = id;
-        }
-    }
-    b32 clicked = uistate.active == id && uistate.hot == id && !uistate.left_mouse_down;
-    if (clicked) {
-        *value = !*value;
-    }
-    i32 gap = 5;
-    RenderRectangle(pos_x, pos_y, size, size, uistyle.fg);
-    RenderRectangle(pos_x + gap, pos_y + gap, size - 2 * gap, size - 2*gap, uistyle.bg);
-    if (*value){
-        RenderRectangle(pos_x + 2 * gap, pos_y + 2 * gap, size - 4 * gap, size - 4 * gap, uistyle.fg);
-    }
-}
-
-void UI_Selector(char **text, i32 id, i32 pos_x, i32 pos_y, i32 size, i32 n, i32 *selection){
-    i32 gap = 5;
-    for (i32 i = 0; i < n; i++){
-       if (uistate.mouse_x > pos_x &&
-        uistate.mouse_y > (pos_y + (size + gap) * i)       &&
-        uistate.mouse_x < (pos_x + size) &&
-        uistate.mouse_y < (pos_y + (size + gap) * (i + 1))) {
-        uistate.hot = id;
-        if (uistate.active == 0 && uistate.left_mouse_down) {
-            uistate.active = id;
-        }
-        b32 clicked = uistate.active == id && uistate.hot == id && !uistate.left_mouse_down;
-        if (clicked) {
-            *selection = i;
-        }
-    }
-    }
-    for (i32 i = 0; i < n; i++){
-        RenderRectangle(pos_x, 
-                (pos_y + i * size + i * gap),
-                size,
-                size,
-                uistyle.fg
-                );
-        RenderRectangle(pos_x + gap, 
-                (pos_y + i * size + (i + 1) * gap),
-                size - 2 * gap,
-                size - 2 * gap,
-                uistyle.bg
-                );
-        if (*selection == i){
-            RenderRectangle(pos_x + 2 * gap,
-                    (pos_y + i * size + (i + 2) * gap),
-                    size - 4 * gap,
-                    size - 4 * gap,
-                    uistyle.fg
-                    );
-
-        }
-    }
-}
-void UI_Slider(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height, f32 min, f32 max, f32 *value){
-    i32 gap = 5;
-    if (uistate.mouse_x > pos_x &&
-            uistate.mouse_y > pos_y &&
-            uistate.mouse_x < pos_x + width &&
-            uistate.mouse_y < pos_y + height) {
-        uistate.hot = id;
-        if (uistate.active == 0 && uistate.left_mouse_down) {
-            uistate.active = id;
-        }
-    }
-    if (uistate.active == id && uistate.left_mouse_down) {
-        f32 pos_rel = (f32)(uistate.mouse_x - pos_x - 0.5 * height - 2 * gap) /
-                      (f32)(width - height - 4 * gap);
-        if (pos_rel < 0) pos_rel = 0;
-        if (pos_rel > 1) pos_rel = 1;
-        *value = min + (max - min) * pos_rel;
-        printf("%f %f\n", *value, pos_rel);
-    }
-    f32 pos_rel = (*value - min) / (max - min);
-    f32 dot_pos_x = pos_rel * (width - height);
-    RenderRectangle(pos_x, pos_y, width, height, uistyle.fg);
-    RenderRectangle(pos_x + gap, pos_y + gap, width - 2 * gap, height - 2 * gap, uistyle.bg);
-    RenderRectangle(pos_x + dot_pos_x + 2 * gap, pos_y + 2 * gap, height - 4 * gap, height - 4 * gap, uistyle.fg);
-}
-
 
 #endif

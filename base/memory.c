@@ -7,9 +7,10 @@
 
 void ZeroMemory(void *mem, u32 n)
 {
+    u8 *memory = mem;
     for (u32 i = 0; i < n; i++)
     {
-        *(u8 *)(mem + i) = 0;
+        memory[i] = 0;
     }
 }
 
@@ -19,6 +20,7 @@ Arena *ArenaAllocate(){
     arena->memory_base = malloc(ARENA_STANDARD_SIZE);
     arena->offset = 0;
     if (arena->memory_base == NULL){
+        DEBUG_LOG("Failed to Allocate Arena\n");
         return NULL;
     }
     return arena;
@@ -49,12 +51,14 @@ void *ArenaPush(Arena *arena, u64 size){
         arena->offset += size;
         return memory;
     }
+    DEBUG_LOG("Allocation Failed: No more memory in Arena\n");
     return NULL;
 }
 void *ArenaPushZero(Arena *arena, u64 size){
     void *memory = ArenaPush(arena, size);
-    for (u64 i = 0; i < size; i++) {
-        *(((char*)memory)+i) = 0;
+    if (memory)
+    {
+        ZeroMemory(memory, size);\
     }
     return memory;
 }

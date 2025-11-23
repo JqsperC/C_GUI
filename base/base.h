@@ -84,7 +84,13 @@ typedef struct _string8 {
     u8 *string;
 } String8;
 
-u64 c_string_len(u8*);
+u64 c_string_len(char*);
+
+String8 MakeString(Arena *arena, char *s);
+String8 SubString(String8 string, u32 offset);
+String8 GetWord(String8 string);
+
+void PrintString(String8 string);
 /* MATH*/
 
 typedef union {
@@ -110,6 +116,6 @@ b32 IsPointInRectangle(i32, i32, Rectangle);
 
 /*HASH (TABLE?)*/
 /* djb2 hash function */
-u64 hash(u8 *str);
+u64 hash(String8 string);
 
 #endif

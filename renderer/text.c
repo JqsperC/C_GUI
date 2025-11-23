@@ -8,7 +8,9 @@
 #include FT_FREETYPE_H
 
 static Arena *bitmap_arena;
-static Arena *scratch;
+static Arena *render_arena;
+static Arena *text_line_arena;
+
 static glyph glyphs[ASCII_NUM_GLYPHS];
 
 static i32 max_character_height = 0;
@@ -16,6 +18,21 @@ static i32 line_spacing = 0;
 
 static FT_Library library;
 static FT_Face face;
+
+typedef struct TextLine
+{
+    struct TextLine *next;
+    u32 width_pixels;
+    String8 text;
+
+} TextLine;
+
+typedef enum 
+{
+    AXIS_X = 0,
+    AXIS_Y,
+    AXIS_COUNT
+} axis;
 
 b32 InitializeTextRenderer(){
     i32 error = FT_Init_FreeType(&library);
@@ -27,9 +44,13 @@ b32 InitializeTextRenderer(){
     if (!bitmap_arena) {
         DEBUG_LOG("Error allocating font bitmap arena for\n");
     }
-    scratch = ArenaAllocate();
-    if (!scratch) {
-        DEBUG_LOG("Error allocating scratch arena for text renderer\n");
+    text_line_arena = ArenaAllocate();
+    if (!text_line_arena) {
+        DEBUG_LOG("Error allocating text line arena for text renderer\n");
+    }
+    render_arena = ArenaAllocate();
+    if (!render_arena) {
+        DEBUG_LOG("Error allocating render arena for text renderer\n");
     }
 
     DEBUG_LOG("Freetype initialized\n");
@@ -94,8 +115,7 @@ i32 RenderCharacter(i32 cursor_x, i32 cursor_y, u8 character, ColorRGBX color)
     glyph glyph = glyphs[character];
     i32 w = glyph.bitmap_width;
     i32 h = glyph.bitmap_height;
-    u32 *pixel = ArenaPush(scratch, w * h);
-    // DEBUG_LOG("Rendering character %c, dim: %d %d \n", character, w, h);
+    u32 *pixel = ArenaPush(render_arena, w * h);
     for (i32 i = 0; i < w; i++) 
     {
         for (i32 j = 0; j < h; j++)
@@ -109,144 +129,204 @@ i32 RenderCharacter(i32 cursor_x, i32 cursor_y, u8 character, ColorRGBX color)
     i32 pos_x = cursor_x + glyph.bearing_x;
     i32 pos_y = cursor_y + max_character_height - glyph.bearing_y;
     RenderARGBBitmap(pos_x, pos_y, pixel, w, h);
-    ArenaClear(scratch);
+    ArenaClear(render_arena);
     return glyph.advance;
 }
+
 i32 GetCharacterRenderWidth(u8 character)
 {
     glyph glyph = glyphs[character];
     return glyph.advance;
 }
 
-i32 GetStringRenderWidth(u8 *string)
+i32 GetLineWidthNoWrap(String8 string)
 {
     u32 width = 0;
-    for (u8 *c = string; *c != 0; c++){
-        glyph glyph = glyphs[*c];
-        width += glyph.advance;
-    }
-    return width;
-}
-
-i32 GetWordRenderWidth(u8 *string)
-{ 
-    u32 width = 0;
-    for (u8 *c = string; *c != 0; c++){
-        glyph glyph = glyphs[*c];
-        width += glyph.advance;
-        if (*c == ' ')
+    for (u32 i = 0; i < string.size; i++){
+        if (string.string[i] == '\n')
         {
             return width;
         }
+        glyph glyph = glyphs[string.string[i]];
+        width += glyph.advance;
     }
     return width;
 }
 
-i32 GetTextRenderLineWidth (u8 *string, i32 width, text_wrap_kind wrap)
-{
-    i32 line_width = 0;
-    for (u8 *c = string; *c != 0; c++)
-    {
-        u8 character = *c;
-        switch (wrap)
-        {
-            case WRAP_KIND_CHAR:
-                {
-                    if (GetCharacterRenderWidth(character) + line_width > width)
-                    {
-                        return line_width;
-                    }
-                }
-            case WRAP_KIND_WORD:
-                {
-                    i32 word_width = GetWordRenderWidth(c);
-                    if (word_width + line_width > width && word_width < width) {
-                        return line_width;
-                    }
-                    break;
-                }
-            default:
-                {
-                    return width;
-                }
-        }
-        line_width += GetCharacterRenderWidth(character);
+i32 GetNextWordRenderWidth(String8 string)
+{ 
+    u32 width = 0;
+    String8 word = GetWord(string);
+    for (u32 c = 0; c < string.size; c++){
+        glyph glyph = glyphs[word.string[c]];
+        width += glyph.advance;
     }
-    return line_width;
+    return width;
 }
 
-void RenderTextRect(Rectangle rect, u8 *string, ColorRGBX color, text_wrap_kind wrap, text_align_kind align)
+TextLine *SplitTextIntoLines(Arena *result, String8 string, text_wrap_kind wrap, u32 max_line_width)
 {
-    RenderText(rect.x, rect.y, rect.width, rect.height, string, color, wrap, align);
+    TextLine *current_line = ArenaPushZero(result, sizeof(TextLine));
+    TextLine *first = current_line;
+    first->text = string;
+    switch (wrap)
+    {
+        case WRAP_KIND_CHAR:
+        {
+            u32 line_width_pixels = 0;
+            u32 line_num_chars = 0;
+            for (u32 c = 0; c < string.size; c++)
+            {
+                u8 character = string.string[c];
+                u32 w = GetCharacterRenderWidth(character);
+                if (line_width_pixels + w > max_line_width || character == '\n')
+                {
+                    TextLine *line = ArenaPushZero(result, sizeof(TextLine));
+                    current_line->text.size = line_num_chars;
+                    current_line->width_pixels = line_width_pixels;
+                    current_line->next = line;
+                    current_line = line;
+                    current_line->text = SubString(string, c);
+                    line_width_pixels = 0;
+                    line_num_chars = 0;
+                }
+                if ((character == ' ' && line_num_chars == 0) ||
+                    character == '\n')
+                {
+                    current_line->text = SubString(string, c + 1);
+                }
+                line_num_chars++;
+                line_width_pixels += w;
+            }
+            current_line->text.size = line_num_chars;
+            current_line->width_pixels = line_width_pixels;
+            break;
+        }
+
+        case WRAP_KIND_WORD:
+        {
+            u32 line_width_pixels = 0;
+            u32 line_num_chars = 0;
+            u32 c = 0;
+            while (c < string.size)
+            {
+                u8 character = string.string[c];
+                String8 current_substring = SubString(string, c);
+                String8 current_word = GetWord(current_substring);
+                u32 w = GetNextWordRenderWidth(current_word);
+                if (line_width_pixels + w > max_line_width || character == '\n')
+                {
+                    TextLine *line = ArenaPushZero(result, sizeof(TextLine));
+                    current_line->text.size = line_num_chars;
+                    current_line->width_pixels = line_width_pixels;
+                    current_line->next = line;
+                    current_line = line;
+                    current_line->text = SubString(string, c);
+                    line_width_pixels = 0;
+                    line_num_chars = 0;
+                }
+                if ((character == ' ' && line_num_chars == 0) ||
+                    character == '\n')
+                {
+                    current_line->text = SubString(string, c + 1);
+                } else {
+                    line_num_chars += current_word.size;
+                    line_width_pixels += w;
+                }
+                c += current_word.size;
+            }
+            current_line->text.size = line_num_chars;
+            current_line->width_pixels = line_width_pixels;
+            break;
+        }
+        case WRAP_KIND_NONE:
+        default:
+        {
+            break;
+        }
+    }
+    return first;
+   }
+
+void RenderTextRect(Rectangle rect, String8 text, ColorRGBX color, text_wrap_kind wrap, text_horizontal_align_kind align_x, text_vertical_align_kind align_y)
+{
+    RenderText(rect.x, rect.y, rect.width, rect.height, text, color, wrap, align_x, align_y);
 }
 
-void RenderText(i32 pos_x, i32 pos_y, i32 width, i32 height, u8 *string, ColorRGBX color, text_wrap_kind wrap, text_align_kind align)
+void RenderText(i32 pos_x, i32 pos_y, i32 width, i32 height, String8 text, ColorRGBX color, text_wrap_kind wrap, text_horizontal_align_kind align_x, text_vertical_align_kind align_y)
 {
-    if (!string) {
+    if (!text.string) {
         return;
     }
     i32 cursor_x = 0;
     i32 cursor_y = 0;
-    
-    i32 line_width = GetTextRenderLineWidth(string, width, wrap);
-    for (u8 *c = string; *c != 0 && cursor_y < height ; c++)
+
+    TextLine *line = SplitTextIntoLines(text_line_arena, text, wrap, width);
+
+    u32 num_lines = 0;
+
+    for (TextLine *current = line; current != NULL; current = current->next)
     {
-        u8 character = *c;
-        switch (wrap)
+        num_lines++;
+    }
+
+    u32 y_align_offset = 0;
+    i32 text_height = num_lines * line_spacing;
+    if (text_height < height) {
+        switch(align_y)
         {
-            case WRAP_KIND_CHAR:
-                {
-                    if (GetCharacterRenderWidth(character) + cursor_x > width)
-                    {
-                        cursor_x = 0;
-                        cursor_y += line_spacing;
-                        if (cursor_y + line_spacing > height) return;
-                    }
-                }
-            case WRAP_KIND_WORD:
-                {
-                    i32 word_width = GetWordRenderWidth(c);
-                    if (word_width + cursor_x > width && word_width < width) {
-                        cursor_x = 0;
-                        cursor_y += line_spacing;
-                        if (cursor_y + line_spacing > height) return;
-                    }
-                    break;
-                }
+            case VERTICAL_ALIGN_CENTER:
+                y_align_offset = (height - text_height) / 2.0f;
+                break;
+            case VERTICAL_ALIGN_BOTTOM:
+                y_align_offset = height - text_height;
+                break;
             default:
-                {
-                    break;
-                }
+                y_align_offset = 0; 
         }
-        if (cursor_x == 0 && *c == ' ')
-        { 
-            continue;
-        }
-        if (cursor_x == 0)
-        {
-            line_width = GetTextRenderLineWidth(c, width, wrap);
-            switch (align) {
-                case ALIGN_CENTER:
-                {
-                    cursor_x = (width - line_width) /  2.0f;
-                    break;
-                }
-                case ALIGN_RIGHT:
+    }
+    cursor_y = y_align_offset;
+    while (line != NULL)
+    {
+        String8 string = line->text;
+        u32 align_offset = 0;
+        if (line->width_pixels < (u32)width){
+            switch (align_x)
+            {
+                case HORIZONTAL_ALIGN_CENTER:
                     {
-                        cursor_x = (width - line_width);
+                        align_offset = (width - line->width_pixels) / 2.0f;
+                        break;
+                    }
+                case HORIZONTAL_ALIGN_RIGHT:
+                    {
+                        align_offset = width - line->width_pixels;
                         break;
                     }
                 default:
                     {
-                        break;
+                        align_offset = 0;
                     }
             }
         }
-        i32 bearing = RenderCharacter(pos_x + cursor_x, pos_y + cursor_y, character, color);
-        cursor_x += bearing;
+        cursor_x = align_offset;
+        DEBUG_LOG("cursor: %lu %lu\n", cursor_x, cursor_y);
+
+        for (u32 c = 0; c < string.size; c++)
+        {
+            u8 character = string.string[c];
+            i32 bearing = RenderCharacter(pos_x + cursor_x, pos_y + cursor_y, character, color);
+            cursor_x += bearing;
+        }
+        cursor_y += line_spacing;
+        if (cursor_y + max_character_height > height)
+        {
+            break;
+        }
+       line = line->next;
     }
+
+    ArenaClear(text_line_arena);
 }
-
-
 
 #endif

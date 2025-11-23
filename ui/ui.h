@@ -67,6 +67,8 @@ typedef struct UI_widget {
     u64 id;
     u64 last_frame_touched;
 
+    String8 string;
+
     ui_widget_flags flags;
     ui_size size[AXIS_COUNT];
 
@@ -96,38 +98,34 @@ typedef struct {
 void UI_Initialize();
 
 void UI_SetStyle(ui_style style);
-
-UI_widget *UI_PushParent(UI_widget *widget, ui_layout_axis axis);
-UI_widget *UI_PopParent();
-
-u64 UI_Key();
-u64 UI_KeyString(u8 *str);
-
-UI_widget *UI_MakeWidget(u8 *label, ui_widget_flags flags, ui_size size[AXIS_COUNT]);
-ui_signal UI_SignalFromWidget(UI_widget *widget);
-
 void UI_StyleSetFont(char *file, i32 size);
 void UI_StyleSetFGColor(ColorRGBX color);
 void UI_StyleSetBGColor(ColorRGBX color);
 void UI_StyleSetHoverColor(ColorRGBX color);
 void UI_StyleSetActiveColor(ColorRGBX color);
 
+
+UI_widget *UI_PushParent(UI_widget *widget, ui_layout_axis axis);
+UI_widget *UI_PopParent();
+
+u64 UI_Key();
+u64 UI_KeyString(String8 str);
+
+UI_widget *UI_MakeWidget(String8 label, ui_widget_flags flags, ui_size size[AXIS_COUNT]);
+ui_signal UI_SignalFromWidget(UI_widget *widget);
+
 void UI_Begin(i32 mouse_x, i32 mouse_y, b32 mouse_down, i32 width, i32 height);
 void UI_End();
 
-void UI_StartLayoutBlock(u8 *label, ui_size size[2], ui_layout_axis layout_direction);
+void UI_StartLayoutBlock(String8 label, ui_size size[2], ui_layout_axis layout_direction);
 void UI_EndLayoutBlock();
 
-void UI_StartGroup(u8 *label, u8 *button_label, ui_layout_axis layout_direction, b32 *show_group);
+void UI_StartGroup(String8 label, String8 button_label, ui_layout_axis layout_direction, b32 *show_group);
 void UI_EndGroup();
 
 void UI_Layout();
 void UI_Render();
 
-void UI_Label(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height);
-ui_signal UI_Button(u8 *label, ui_size size[AXIS_COUNT]);
-void UI_Checkbox(char *text, i32 id, i32 pos_x, i32 pos_y, i32 size, b32 *value);
-void UI_Selector(char **text, i32 id, i32 pos_x, i32 pos_y, i32 size, i32 n, i32 *selection);
-void UI_Slider(char *text, i32 id, i32 pos_x, i32 pos_y, i32 width, i32 height, f32 min, f32 max, f32 *value);
+ui_signal UI_Button(String8 label, ui_size size[AXIS_COUNT]);
 
 #endif

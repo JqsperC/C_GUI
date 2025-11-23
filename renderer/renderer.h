@@ -21,7 +21,6 @@ typedef struct {
     i32 bytes_per_pixel;
 } sdl_offscreen_buffer;
 
-
 typedef struct {
     union {
         struct {
@@ -93,16 +92,25 @@ typedef enum {
 } text_wrap_kind;
 
 typedef enum {
-    ALIGN_LEFT = 0,
-    ALIGN_CENTER,
-    ALIGN_RIGHT,
+    HORIZONTAL_ALIGN_LEFT = 0,
+    HORIZONTAL_ALIGN_CENTER,
+    HORIZONTAL_ALIGN_RIGHT,
 
-    ALIGN_KIND_COUNT
-} text_align_kind;
+    HORIZONTAL_ALIGN_KIND_COUNT
+} text_horizontal_align_kind;
+
+typedef enum {
+    VERTICAL_ALIGN_TOP = 0,
+    VERTICAL_ALIGN_CENTER,
+    VERTICAL_ALIGN_BOTTOM,
+
+    VERTICAL_ALIGN_KIND_COUNT
+} text_vertical_align_kind;
+
 b32 InitializeTextRenderer();
 b32 LoadFont(char *filename, i32 size);
 i32 RenderCharacter(i32 pos_x, i32 pos_y, u8 character, ColorRGBX color);
-void RenderText(i32 pos_x, i32 pos_y, i32 width, i32 height, u8 *string, ColorRGBX color, text_wrap_kind wrap, text_align_kind align);
-void RenderTextRect(Rectangle rect, u8 *string, ColorRGBX color, text_wrap_kind wrap, text_align_kind align);
+void RenderText(i32 pos_x, i32 pos_y, i32 width, i32 height, String8 string, ColorRGBX color, text_wrap_kind wrap, text_horizontal_align_kind align_x, text_vertical_align_kind align_y);
+void RenderTextRect(Rectangle rect, String8 text, ColorRGBX color, text_wrap_kind wrap, text_horizontal_align_kind lign_x, text_vertical_align_kind align_y);
 
 #endif

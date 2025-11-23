@@ -71,12 +71,78 @@ static f32 SDLGetSecondsElapsed(u64 OldCounter, u64 CurrentCounter)
     return ((f32)(CurrentCounter - OldCounter) / (f32)(SDL_GetPerformanceFrequency()));
 }
 
+void TestLayout(Arena *string_arena_frame, b32 *show_sidebar_group1, b32 *show_sidebar_group2)
+{
+UI_StartLayoutBlock(MakeString(string_arena_frame, "Block 1"), (ui_size[2])
+                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_X);
+        {
+            UI_StartLayoutBlock(MakeString(string_arena_frame, "Block 2"), (ui_size[2])
+                    {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.3}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_Y);
+            {
+                UI_StartLayoutBlock(MakeString(string_arena_frame, "Block 3"), (ui_size[2])
+                        {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.05}}, AXIS_X);
+                {
+                    UI_Button(MakeString(string_arena_frame, "Button 1"), (ui_size[AXIS_COUNT])
+                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+                    UI_Button(MakeString(string_arena_frame, "Button 2"), (ui_size[AXIS_COUNT])
+                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+                    UI_Button(MakeString(string_arena_frame, "Button 3"), (ui_size[AXIS_COUNT])
+                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+                    UI_Button(MakeString(string_arena_frame, "Button 4"), (ui_size[AXIS_COUNT])
+                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
+                }
+                UI_EndLayoutBlock();
+                UI_StartGroup(MakeString(string_arena_frame, "Group 1"), MakeString(string_arena_frame, "Group 1Button"), AXIS_Y, show_sidebar_group1);
+                {
+                    if (*show_sidebar_group1)
+                    {
+                        UI_MakeWidget(MakeString(string_arena_frame, "Group 1 Box 1"), 0, (ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                        UI_MakeWidget(MakeString(string_arena_frame, "Group 1 Box 2"), 0, (ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                        UI_MakeWidget(MakeString(string_arena_frame, "Group 1 Box 3"), 0, (ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                    }
+                }
+                UI_EndGroup();
+                UI_StartGroup(MakeString(string_arena_frame, "Group 2"), MakeString(string_arena_frame, "Group 2 Button"), AXIS_Y, show_sidebar_group2);
+                {
+                    if (*show_sidebar_group2)
+                    {
+                        UI_MakeWidget(MakeString(string_arena_frame, "Group 2 Box 1"), 0,(ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                        UI_MakeWidget(MakeString(string_arena_frame, "Group 2 Box 2"), 0,(ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                        UI_MakeWidget(MakeString(string_arena_frame, "Group 2 Box 3"), 0,(ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                        UI_MakeWidget(MakeString(string_arena_frame, "Group 2 Box 4"), 0,(ui_size[AXIS_COUNT])
+                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
+                    }
+                }
+                UI_EndGroup();
+            }
+            UI_EndLayoutBlock();
+            UI_StartLayoutBlock(MakeString(string_arena_frame, "Block 4"), (ui_size[2])
+                    {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.7}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_Y);
+            {
+                UI_StartLayoutBlock(MakeString(string_arena_frame, "Block 5"), (ui_size[2])
+                        {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1},{.kind = UI_SIZEKIND_PIXELS, .value = 100}}, AXIS_X);
+                UI_EndLayoutBlock();
+            }
+            UI_EndLayoutBlock();
+
+        }
+        UI_EndLayoutBlock();
+
+}
+
 int main(){
     printf("%lu\n", sizeof(ColorARGB));
     SDL_Window *window;
     SDL_Renderer *renderer;
     sdl_window_dimension dimension;
     Arena *arena_framebuffer = ArenaAllocateFixedSize(1920 * 1080 * 4 * 10);
+    Arena *string_arena_frame = ArenaAllocate();
 
     if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
         printf("Failed to initialize SDL: %s\n", SDL_GetError());
@@ -124,66 +190,9 @@ int main(){
 
         v2f32 window_size = GetWindowSize();
         UI_Begin(ui_state.mouse_x, ui_state.mouse_y, ui_state.left_mouse_down, window_size.x - 1, window_size.y - 1);
-        UI_StartLayoutBlock("Block 1", (ui_size[2])
-                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_X);
-        {
-            UI_StartLayoutBlock("Block 2", (ui_size[2])
-                    {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.3}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_Y);
-            {
-                UI_StartLayoutBlock("Block 3", (ui_size[2])
-                        {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.05}}, AXIS_X);
-                {
-                    UI_Button("Button 1", (ui_size[AXIS_COUNT])
-                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
-                    UI_Button("Button 2", (ui_size[AXIS_COUNT])
-                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
-                    UI_Button("Button 3", (ui_size[AXIS_COUNT])
-                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
-                    UI_Button("BUtton 4", (ui_size[AXIS_COUNT])
-                            {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.25},{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}});
-                }
-                UI_EndLayoutBlock();
-                UI_StartGroup("Group 1", "Group 1Button", AXIS_Y, &show_sidebar_group1);
-                {
-                    if (show_sidebar_group1)
-                    {
-                        UI_MakeWidget("Group 1 Box 1", 0, (ui_size[AXIS_COUNT])
-                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-                        UI_MakeWidget("Group 1 Box 2", 0, (ui_size[AXIS_COUNT])
-                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-                        UI_MakeWidget("Group 1 Box 3", 0, (ui_size[AXIS_COUNT])
-                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-                    }
-                }
-                UI_EndGroup();
-                UI_StartGroup("Group 2", "Group 2 Button", AXIS_Y, &show_sidebar_group2);
-                {
-                    if (show_sidebar_group2)
-                    {
-                        UI_MakeWidget("Group 2 Box 1", 0,(ui_size[AXIS_COUNT])
-                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-                        UI_MakeWidget("Group 2 Box 2", 0,(ui_size[AXIS_COUNT])
-                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-                        UI_MakeWidget("Group 2 Box 3", 0,(ui_size[AXIS_COUNT])
-                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-                        UI_MakeWidget("Group 2 Box 4", 0,(ui_size[AXIS_COUNT])
-                                {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}, {.kind = UI_SIZEKIND_PIXELS, .value = 80}});
-                    }
-                }
-                UI_EndGroup();
-            }
-            UI_EndLayoutBlock();
-            UI_StartLayoutBlock("Block 4", (ui_size[2])
-                    {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 0.7}, {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1}}, AXIS_Y);
-            {
-                UI_StartLayoutBlock("Block 5", (ui_size[2])
-                        {{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1},{.kind = UI_SIZEKIND_PIXELS, .value = 100}}, AXIS_X);
-                UI_EndLayoutBlock();
-            }
-            UI_EndLayoutBlock();
 
-        }
-        UI_EndLayoutBlock();
+        TestLayout(string_arena_frame, &show_sidebar_group1, &show_sidebar_group2);
+
         UI_Layout();
         UI_Render();
 
@@ -198,7 +207,9 @@ int main(){
         }
         // DEBUG_LOG("Running at %.2f fps\n", 1.0f / SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()));
         last_counter = SDL_GetPerformanceCounter();
+        ArenaClear(string_arena_frame);
     }
     DestroyBackbuffer();
+    ArenaRelease(string_arena_frame);
     ArenaRelease(arena_framebuffer);
 }
