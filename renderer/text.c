@@ -52,8 +52,6 @@ b32 InitializeTextRenderer(){
     if (!render_arena) {
         DEBUG_LOG("Error allocating render arena for text renderer\n");
     }
-
-    DEBUG_LOG("Freetype initialized\n");
     return true;
 }
 
@@ -83,7 +81,6 @@ b32 LoadFont(char *filename, i32 size){
         }
         if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
         {
-            DEBUG_LOG("Rendering glyph\n");
             error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
             if (error)
             {
@@ -310,8 +307,6 @@ void RenderText(i32 pos_x, i32 pos_y, i32 width, i32 height, String8 text, Color
             }
         }
         cursor_x = align_offset;
-        DEBUG_LOG("cursor: %lu %lu\n", cursor_x, cursor_y);
-
         for (u32 c = 0; c < string.size; c++)
         {
             u8 character = string.string[c];

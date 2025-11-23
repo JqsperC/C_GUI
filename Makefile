@@ -1,7 +1,7 @@
 TARGET := program
 
 CC := gcc
-CFLAGS := -Wall -Wextra -std=c99 -I.
+CFLAGS := -Wall -Wextra -Werror -std=c99 -I.
 CFLAGS += -I/usr/include/freetype2 -I/usr/include/libpng16
 LLIBRARIES := -lSDL3 -lfreetype
 

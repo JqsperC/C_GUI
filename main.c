@@ -137,7 +137,6 @@ UI_StartLayoutBlock(MakeString(string_arena_frame, "Block 1"), (ui_size[2])
 }
 
 int main(){
-    printf("%lu\n", sizeof(ColorARGB));
     SDL_Window *window;
     SDL_Renderer *renderer;
     sdl_window_dimension dimension;
