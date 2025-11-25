@@ -93,6 +93,8 @@ typedef struct {
     ColorRGBX border;
     ColorRGBX debug;
 
+    u32 text_padding[AXIS_COUNT];
+
 } ui_style;
 
 void UI_Initialize();
@@ -127,5 +129,6 @@ void UI_Layout();
 void UI_Render();
 
 ui_signal UI_Button(String8 label, ui_size size[AXIS_COUNT]);
+ui_signal UI_Slider(String8 label, float *value);
 
 #endif

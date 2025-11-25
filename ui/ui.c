@@ -176,9 +176,12 @@ void LayoutStandaloneSize(UI_widget *widget)
         case UI_SIZEKIND_PIXELS:
         {
             widget->computed_size[AXIS_X] = widget->size[AXIS_X].value;
+            break;
         }
         case UI_SIZEKIND_TEXT_CONTENT:
         {
+            u32 width = GetTextWidthNoWrap(widget->string);
+            widget->computed_size[AXIS_X] = width + 2 * uistyle.text_padding[AXIS_X];
             break;
         }
         default:
@@ -191,6 +194,7 @@ void LayoutStandaloneSize(UI_widget *widget)
         case UI_SIZEKIND_PIXELS:
          {
              widget->computed_size[AXIS_Y] = widget->size[AXIS_Y].value;
+             break;
          }
         case UI_SIZEKIND_TEXT_CONTENT:
         {
@@ -371,7 +375,18 @@ void RenderLayout(UI_widget *widget)
     }
     if (UI_WIDGETFLAG_DRAW_TEXT & widget->flags)
     {
-        RenderTextRect(widget->rect, widget->string, uistyle.fg, WRAP_KIND_WORD, HORIZONTAL_ALIGN_CENTER, VERTICAL_ALIGN_CENTER);
+        Rectangle rect_padding = {
+            .x = widget->rect.x + uistyle.text_padding[AXIS_X],
+            .y = widget->rect.y + uistyle.text_padding[AXIS_Y],
+            .width = widget->rect.width - 2 * uistyle.text_padding[AXIS_X],
+            .height = widget->rect.height - 2 * uistyle.text_padding[AXIS_X],
+        };
+    RenderTextRect(rect_padding,
+            widget->string,
+            uistyle.fg,
+            WRAP_KIND_WORD,
+            HORIZONTAL_ALIGN_LEFT,
+            VERTICAL_ALIGN_TOP);
     }
     RenderLayout(widget->first);
     RenderLayout(widget->next);
@@ -439,38 +454,6 @@ void UI_StartLayoutBlock(String8 label, ui_size size[2], ui_layout_axis layout_d
 void UI_EndLayoutBlock()
 {
     UI_PopParent();
-}
-
-void UI_StartGroup(String8 label, String8 button_label, ui_layout_axis layout_direction, b32 *show_group)
-{
-    ui_size layout_axis = {.kind = UI_SIZEKIND_SUM_CHILDREN, .value = 0};
-    ui_size other_axis  = {.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1};
-    ui_size size_group[AXIS_COUNT];
-    size_group[layout_direction] = layout_axis;
-    size_group[AXIS_Y - layout_direction] = other_axis;
-
-    UI_StartLayoutBlock(label, size_group, layout_direction);
-    if (UI_Button(button_label, (ui_size[AXIS_COUNT]){{.kind = UI_SIZEKIND_PARENT_PERCENT, .value = 1},{.kind = UI_SIZEKIND_PIXELS, .value = 50}}).clicked)
-    {
-        *show_group = !*show_group;
-    }
-}
-
-void UI_EndGroup()
-{
-    UI_EndLayoutBlock();
-}
-
-ui_signal UI_Button(String8 label, ui_size size[AXIS_COUNT]) {
-    UI_widget *widget = UI_MakeWidget(label,
-            UI_WIDGETFLAG_CLICKABLE |
-            UI_WIDGETFLAG_HOVERABLE |
-            UI_WIDGETFLAG_DRAW_BACKGROUND |
-            UI_WIDGETFLAG_DRAW_BORDER|
-            UI_WIDGETFLAG_DRAW_TEXT,
-            size);
-    ui_signal signal = UI_SignalFromWidget(widget);
-    return signal;
 }
 
 #endif

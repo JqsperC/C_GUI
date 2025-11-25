@@ -6,6 +6,7 @@
 void PrintString(String8 string)
 {
     write(1, string.string, string.size);
+    fsync(1);
 }
 
 u64 c_string_len(char *str){

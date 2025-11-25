@@ -107,9 +107,13 @@ typedef enum {
     VERTICAL_ALIGN_KIND_COUNT
 } text_vertical_align_kind;
 
+
 b32 InitializeTextRenderer();
 b32 LoadFont(char *filename, i32 size);
 i32 RenderCharacter(i32 pos_x, i32 pos_y, u8 character, ColorRGBX color);
+
+u32 GetTextWidthNoWrap(String8 string);
+
 void RenderText(i32 pos_x, i32 pos_y, i32 width, i32 height, String8 string, ColorRGBX color, text_wrap_kind wrap, text_horizontal_align_kind align_x, text_vertical_align_kind align_y);
 void RenderTextRect(Rectangle rect, String8 text, ColorRGBX color, text_wrap_kind wrap, text_horizontal_align_kind lign_x, text_vertical_align_kind align_y);
 

@@ -150,6 +150,33 @@ i32 GetLineWidthNoWrap(String8 string)
     return width;
 }
 
+u32 GetTextWidthNoWrap(String8 string)
+{
+    u32 max_width = 0;
+    u32 width = 0;
+
+    for (u32 i = 0; i < string.size; i++){
+        if (string.string[i] == '\n')
+        {
+            if(width > max_width)
+            {
+                max_width = width;
+                width = 0;
+            }
+            continue;
+        }
+        glyph glyph = glyphs[string.string[i]];
+        width += glyph.advance;
+    }
+    if(width > max_width)
+    {
+        max_width = width;
+        width = 0;
+    }
+
+    return max_width;
+}
+
 i32 GetNextWordRenderWidth(String8 string)
 { 
     u32 width = 0;
@@ -264,6 +291,9 @@ void RenderText(i32 pos_x, i32 pos_y, i32 width, i32 height, String8 text, Color
 
     for (TextLine *current = line; current != NULL; current = current->next)
     {
+        DEBUG_LOG("'");
+        PrintString(current->text);
+        DEBUG_LOG("'\n number of chars %d line width pixels: %d\n ", current->text.size, current->width_pixels);
         num_lines++;
     }
 
